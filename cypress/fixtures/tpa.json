@@ -1,6 +1,6 @@
 {
-    "_id": "647869ae1f8208a4af619ffb",
     "id": "tpa-test-project-with-tpa",
+    "templateId": "template-test-project",
     "version": "1.0.0",
     "type": "agreement",
     "context": {

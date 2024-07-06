@@ -17,8 +17,8 @@ import Fieldset from 'primevue/fieldset';
 import Dropdown from 'primevue/dropdown';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
-import Toast from 'primevue/toast';
 import Tag from 'primevue/tag';
+import { useTPAMode } from '@/utils/tpaMode.js';
 
 const props = defineProps({
     fieldName: {
@@ -29,6 +29,7 @@ const props = defineProps({
 
 const toast = useToast();
 const appThemeStore = useAppThemeStore();
+const { tpaEditMode } = useTPAMode();
 const tpaEditionStore = useTpaEditionStore();
 
 const metrics = ref(tpaEditionStore.getTpaField(props.fieldName) ?? {});
@@ -378,13 +379,13 @@ async function changeElementType(metricIndex) {
     <DataView :value="metricEntries" dataKey="id">
         <template #list="slotProps">
 
-            <Fieldset :legend="slotProps.data[0]" :toggleable="true" :collapsed="collapsed[slotProps.index]" class="col-12" @toggle="collapsed[slotProps.index] = !collapsed[slotProps.index]" :id="slotProps.data[0]">
+            <Fieldset :legend="slotProps.data[0]" :toggleable="true" :collapsed="collapsed[slotProps.index]" @toggle="collapsed[slotProps.index] = !collapsed[slotProps.index]" :id="slotProps.data[0]">
                 
                 <template #legend>
                     <div class="flex align-items-center gap-2 metric-legend">
                         {{  slotProps.data[0] }}
                         <Tag v-if="metricEntries.filter(metric => metric[0] === slotProps.data[0]).length > 1" severity="warning" class="pi pi-exclamation-triangle" title="This metric ID is duplicated and only the last one will be persisted!" />
-                        <Button class="p-button-text" icon="pi pi-play" severity="success" @click="showSelectWindowPanel($event)" />
+                        <Button class="p-button-text" aria-label="playMetric" icon="pi pi-play" severity="success" @click="showSelectWindowPanel($event)" />
 
                         <OverlayPanel ref="selectWindowOverlayPanel">
                             <div class="flex flex-column gap-4">
@@ -402,16 +403,16 @@ async function changeElementType(metricIndex) {
                                         <Calendar v-model="windowComputation.end" inputId="windowEnd" placeholder="Select an end date" />
                                     </div>
                                 </div>
-                                <Button label="Compute metric" @click="computeMetric(slotProps.data[1])" />
+                                <Button label="Compute metric" aria-label="computeMetric" click="computeMetric(slotProps.data[1])" />
                             </div>
                         </OverlayPanel>
-                        <Button v-if="tpaEditionStore.isEditionMode" class="p-button-text" icon="pi pi-trash" severity="danger" @click="deleteMetric($event, slotProps.index)" />
+                        <Button v-if="tpaEditMode" class="p-button-text" aria-label="deleteMetric" icon="pi pi-trash" severity="danger" @click="deleteMetric($event, slotProps.index)" />
                     </div>
                 </template>
 
                 <div class="flex flex-column align-items-start gap-3">
 
-                    <div v-if="tpaEditionStore.isEditionMode" class="flex align-items-center gap-2 w-full">
+                    <div v-if="tpaEditMode" class="flex align-items-center gap-2 w-full">
                         <i class="pi pi-file-edit"></i>
                         <span class="font-semibold">Id:</span>
                         <InputText type="text" v-model="slotProps.data[0]" @change="updateMetricsFromEntries" class="w-full" />
@@ -421,13 +422,13 @@ async function changeElementType(metricIndex) {
                         <span class="flex align-items-center gap-2">
                             <i class="pi pi-file"></i>
                             <b>Element:</b>
-                            <Dropdown class="editDropdown w-full" :options="tpaEditionStore.COLLECTOR_ELEMENT_TYPES" v-model="metricElementTypes[slotProps.index]" placeholder="Select an element type" optionLabel="label" optionValue="value"  @change="changeElementType(slotProps.index)" :disabled="!tpaEditionStore.isEditionMode" />
+                            <Dropdown class="editDropdown w-full" :options="tpaEditionStore.COLLECTOR_ELEMENT_TYPES" v-model="metricElementTypes[slotProps.index]" placeholder="Select an element type" optionLabel="label" optionValue="value"  @change="changeElementType(slotProps.index)" :disabled="!tpaEditMode" />
                         </span>
                         <div>
                             <div v-if="metricElementTypes[slotProps.index] === 'githubGQL' && !changingElementType" @focusout="updateMetricsFromElement(slotProps.index)">
                                 <StepDisplay :data="metricElements[slotProps.index].count.related.githubGQL.custom" :fieldName="props.fieldName + '[' + slotProps.data[0] + ']' + '.measure.element.count.related'" />
                             </div>
-                            <div v-if="tpaEditionStore.isEditionMode" @focusout="updateMetricsFromElement(slotProps.index)">
+                            <div v-if="tpaEditMode" @focusout="updateMetricsFromElement(slotProps.index)">
                                 <template v-if="metricElementTypes[slotProps.index] === 'json' && !changingElementType">
                                     <CodeEditor width="100%" :wrap="true" v-model="metricElements[slotProps.index]" :languages="[['json', 'JSON']]" :theme="appThemeStore.isDarkModeOn ? 'github-dark' : 'github'" :key="slotProps.data[0]" />
                                 </template>
@@ -446,17 +447,17 @@ async function changeElementType(metricIndex) {
                         <div @click="openEditEventDialog(slotProps.data[1].measure.event, slotProps.data[0], slotProps.index)" class="flex align-items-center gap-2">
                             <Tag v-if="Object.keys(slotProps.data[1].measure.event)?.length === 0" severity="warning">No details</Tag>
                             <div v-else style="cursor: pointer;">
-                                <Tag :class="tpaEditionStore.isEditionMode && 'cursor-pointer'"
+                                <Tag :class="tpaEditMode && 'cursor-pointer'"
                                     :severity="tpaEditionStore.COLLECTOR_EVENT_SOURCES.includes(Object.keys(slotProps.data[1].measure.event)?.[0]) ? 'success' : 'warning'">
                                     {{ Object.keys(slotProps.data[1].measure.event)?.[0] }} 
                                 </Tag>
                                 {{  Object.keys(Object.values(slotProps.data[1].measure.event)?.[0])?.[0] ? '&rarr;' : '' }}
-                                <Tag v-if="Object.keys(Object.values(slotProps.data[1].measure.event)?.[0])?.[0]" :class="tpaEditionStore.isEditionMode && 'cursor-pointer'"
+                                <Tag v-if="Object.keys(Object.values(slotProps.data[1].measure.event)?.[0])?.[0]" :class="tpaEditMode && 'cursor-pointer'"
                                     :severity="tpaEditionStore.COLLECTOR_EVENT_ENDPOINTS?.[Object.keys(slotProps.data[1].measure.event)?.[0]]?.includes(Object.keys(Object.values(slotProps.data[1].measure.event)?.[0])?.[0]) ? 'success' : 'warning'">
                                     {{ Object.keys(Object.values(slotProps.data[1].measure.event)?.[0])?.[0] }}
                                 </Tag>
                             </div>
-                            <Button v-if="tpaEditionStore.isEditionMode" icon="pi pi-pencil" class="p-button-warning p-button-text" />
+                            <Button v-if="tpaEditMode" icon="pi pi-pencil" aria-label="editMetric" class="p-button-warning p-button-text" />
                         </div>
                     </span>
                     
@@ -473,7 +474,7 @@ async function changeElementType(metricIndex) {
                         </span>
 
                         <div>
-                            <template v-if="tpaEditionStore.isEditionMode">
+                            <template v-if="tpaEditMode">
                                 <template v-if="slotProps.data[1].measure.event.githubGQL">
                                     <StepDisplay v-if="isInteractiveMode" :data="metricDetailsObject[slotProps.index]" :fieldName="props.fieldName + '[' + slotProps.data[0] + ']' + '.measure.event'" />
                                     <div v-else @focusout="updateMetricDetails(slotProps.data[0], slotProps.data[1].measure.event, slotProps.index)" >
@@ -495,8 +496,8 @@ async function changeElementType(metricIndex) {
             </Fieldset>
         </template>
         
-        <template #footer v-if="tpaEditionStore.isEditionMode">
-            <Button label="Add new metric" icon="pi pi-plus" @click="addNewMetric" />
+        <template #footer v-if="tpaEditMode">
+            <Button label="Add new metric" aria-label="addMetric" icon="pi pi-plus" @click="addNewMetric" />
         </template>
     </DataView>
 
@@ -508,18 +509,18 @@ async function changeElementType(metricIndex) {
         <div class="flex justify-content-between gap-5 mb-1">
             <div class="flex-1">
                 <p class="mb-1"><b>Source</b></p>
-                <Dropdown v-if="tpaEditionStore.isEditionMode" class="editDropdown w-full" :options="tpaEditionStore.COLLECTOR_EVENT_SOURCES" v-model="currentEditingSource" placeholder="Select a source" />
+                <Dropdown v-if="tpaEditMode" class="editDropdown w-full" :options="tpaEditionStore.COLLECTOR_EVENT_SOURCES" v-model="currentEditingSource" placeholder="Select a source" />
             </div>
             <div class="flex-1">
                 <p class="mb-1"><b>Endpoint</b></p>
-                <Dropdown v-if="tpaEditionStore.isEditionMode" class="editDropdown w-full" :options="tpaEditionStore.COLLECTOR_EVENT_ENDPOINTS?.[currentEditingSource]" v-model="currentEditingEndpoint" placeholder="Enter an endpoint" />
+                <Dropdown v-if="tpaEditMode" class="editDropdown w-full" :options="tpaEditionStore.COLLECTOR_EVENT_ENDPOINTS?.[currentEditingSource]" v-model="currentEditingEndpoint" placeholder="Enter an endpoint" />
             </div>
         </div>
         
         <template #footer>
             <div class="flex justify-content-end">
-                <Button icon="pi pi-check" label="Save" severity="success" @click="confirmEventEdit" :disabled="!(currentEditingSource && currentEditingEndpoint && tpaEditionStore.COLLECTOR_EVENT_ENDPOINTS?.[currentEditingSource] && tpaEditionStore.COLLECTOR_EVENT_ENDPOINTS?.[currentEditingSource].includes(currentEditingEndpoint))" />
-                <Button icon="pi pi-times" label="Cancel" severity="danger" @click="showEditEventDialog = false" />
+                <Button icon="pi pi-check" label="Save" aria-label="save" severity="success" @click="confirmEventEdit" :disabled="!(currentEditingSource && currentEditingEndpoint && tpaEditionStore.COLLECTOR_EVENT_ENDPOINTS?.[currentEditingSource] && tpaEditionStore.COLLECTOR_EVENT_ENDPOINTS?.[currentEditingSource].includes(currentEditingEndpoint))" />
+                <Button icon="pi pi-times" label="Cancel" aria-label="cancel" severity="danger" @click="showEditEventDialog = false" />
             </div>
         </template>
     </Dialog>
@@ -539,7 +540,6 @@ async function changeElementType(metricIndex) {
         </template> 
     </Dialog>
 
-    <Toast ref="toast" position="bottom-right" :baseZIndex="10000" />
 
 </template>
 
