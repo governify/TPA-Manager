@@ -40,7 +40,7 @@ const updateIsMobile = () => {
 async function getTemplates() {
     await axios.get(templatesURL)
         .then(async (response) => {
-            templates.value = response.data.sort((a, b) => a.id.localeCompare(b.id));
+            templates.value = response.data?.sort((a, b) => a.id.localeCompare(b.id));
         })
         .catch(error => {
             templates.value = [];
@@ -63,7 +63,7 @@ async function getCourses() {
             'Content-Type': 'application/json'
         }
     }).then(async (response) => {
-        courses.value = response.data.scope.sort((a, b) => a.classId.localeCompare(b.classId));
+        courses.value = response.data.scope?.sort((a, b) => a.classId.localeCompare(b.classId));
     })
         .catch(error => {
             courses.value = [];
@@ -166,7 +166,8 @@ async function createTemplateFromSample() {
 
         await axios.post(templatesURL, tpaTemplate, {
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': authorization.value
             }
         });
         displayCreateFromSample.value = false;
@@ -196,12 +197,16 @@ const editTemplate = (templateId) => {
     tpaEditMode.value = true;
     router.push({ name: 'tpa-template', params: { templateId } });
 };
+
+async function handleAuthUpdated() {
+    authorization.value = localStorage.getItem('auth');
+}
 </script>
 
 <template>
     <div style="display: grid; justify-items: center;">
         <div class="card ">
-            <NavMenu @templates-updated="getTemplates" />
+            <NavMenu @templates-updated="getTemplates" @auth-updated="handleAuthUpdated"/>
             <Divider layout="horizontal" />
             <div class="content">
                 <TransitionGroup name="list">
@@ -249,7 +254,7 @@ const editTemplate = (templateId) => {
                 root: { style: 'height: 27px; min-width: 105px ;max-width: 105px ;padding: 0 10px; margin-left: 10px' },
             }" />
                             </div>
-                            <div v-if="courses.some(course => course.templateId === template.id)">
+                            <div v-if="courses?.some(course => course.templateId === template.id)">
                                 <span style="margin-left: 15px; font-size: min(max(15px, 4vw), 18px) !important;">In use
                                     in these courses:</span>
                                 <ScrollPanel style="width: 100%; height: 125px"

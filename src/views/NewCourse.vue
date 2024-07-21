@@ -29,7 +29,7 @@ const new_course = ref({
     "credentials": [],
     "projects": []
 });
-const authorization = computed(() => localStorage.getItem('auth'));
+const authorization = ref();
 const templates = ref([]);
 const jsonInput = ref();
 const visible_addIdentities = ref(false);
@@ -132,13 +132,16 @@ async function addCredentialorIdent() {
     }
 }
 
+async function handleAuthUpdated() {
+    authorization.value = localStorage.getItem('auth');
+}
 
 </script>
 
 <template>
     <div style="display: grid; justify-items: center;">
         <div class="card ">
-            <NavMenu />
+            <NavMenu @auth-updated="handleAuthUpdated"/>
             <Divider layout="horizontal" />
             <div v-if="loading" class="flex flex-column m-5">
                 <ProgressSpinner class="text-center" strokeWidth="4" />

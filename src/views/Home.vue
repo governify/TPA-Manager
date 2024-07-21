@@ -10,11 +10,12 @@ import { changeShowHidden } from '@/utils/showHiddenCourses.js';
 
 const { showHiddenCourses } = changeShowHidden();
 const loading = ref(true);
-const courses = ref();
+const courses = ref([]);
 const toast = useToast();
 const bluejayInfra = bluejayInfraStore();
 const isMobile = ref(window.innerWidth <= 768);
 const coursesURL = ref(bluejayInfra.SCOPE_MANAGER_URL + "/api/v1/scopes/development/courses");
+const authenticated = ref(localStorage.getItem('auth') ? true : false);
 const updateIsMobile = () => {
     isMobile.value = window.innerWidth <= 768;
 };
@@ -46,7 +47,7 @@ async function getCourses() {
             'Content-Type': 'application/json', 'Authorization': `${localStorage.getItem('auth')}`
         }
     }).then(async (response) => {
-        courses.value = response.data.scope.sort((a, b) => a.classId.localeCompare(b.classId));
+        courses.value = response.data.scope?.sort((a, b) => a.classId.localeCompare(b.classId));
         courses.value = [{
             "name": "Courses",
             "children": await filterCourses(courses.value)
@@ -63,6 +64,9 @@ async function getCourses() {
 
 
 async function filterCourses(courses) {
+    if (!courses) {
+        return [];
+    }
     let filteredCourses = [];
     for (let course of courses) {
         if (!course.hidden) {
@@ -76,18 +80,22 @@ async function filterCourses(courses) {
     return filteredCourses;
 }
 
+async function handleAuthUpdated() {
+    getCourses();
+    authenticated.value = localStorage.getItem('auth') ? true : false;
+}
 
 </script>
 <template>
     <div style="display: grid; justify-items: center;">
         <div class="card ">
-            <NavMenu @auth-updated="getCourses" />
+            <NavMenu @auth-updated="handleAuthUpdated" />
             <Divider layout="horizontal" />
             <div v-if="loading" class="flex flex-column m-5">
                 <ProgressSpinner class="text-center" strokeWidth="4" />
                 <h3 class="text-center">Loading...</h3>
             </div>
-            <TreeBrowser @course-updated="getCourses" v-else :nodes="courses" />
+            <TreeBrowser @courseUpdated="getCourses" v-else :nodes="courses" :authenticated="authenticated" />
         </div>
     </div>
 </template>
