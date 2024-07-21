@@ -12,10 +12,12 @@ import Dropdown from 'primevue/dropdown';
 import InputSwitch from 'primevue/inputswitch';
 import { useTPAMode } from '@/utils/tpaMode.js';
 import { changeShowHidden } from '@/utils/showHiddenCourses.js';
+import Checkbox from 'primevue/checkbox';
 
 //Tree logic
 const props = defineProps({
-  nodes: Array
+  nodes: Array,
+  authenticated: Boolean
 });
 
 const expandedStates = reactive({});
@@ -28,11 +30,21 @@ const isExpanded = (nodeId) => {
   return !!expandedStates[nodeId];
 };
 
+watch(
+  () => props.authenticated, 
+  (newVal) => {
+    if (newVal) {
+      authorization.value = localStorage.getItem('auth');
+    }
+  }
+);
+
 //View logic
 const { showHiddenCourses } = changeShowHidden();
 const { tpaEditMode } = useTPAMode();
 const bluejayInfra = bluejayInfraStore();
 const router = useRouter();
+const isMobile = ref(window.innerWidth <= 768);
 const toast = useToast();
 const displayDialogEditClass = ref(false);
 const SCOPES_URL = `${bluejayInfra.SCOPE_MANAGER_URL}/api/v1/scopes/development/`;
@@ -171,7 +183,7 @@ const showGithubRepository = (identities) => {
 
     <!-- Each course node -->
     <div v-if="isExpanded('Courses')" class="children-container">
-      <div v-if="nodes[0].children.length > 0" v-for="course in nodes[0].children" :key="course.classId"
+      <div v-if="nodes[0].children?.length > 0" v-for="course in nodes[0].children" :key="course.classId"
         class="node-content">
         <div class="node-head">
           <span style="font-size: 20px !important;cursor: pointer;" @click.stop="toggleNode(course.classId)">
@@ -180,13 +192,14 @@ const showGithubRepository = (identities) => {
             {{ course.classId }}
           </span>
           <div class="flex gap-2">
-            <Button label="Edit" severity="contrast" icon="pi pi-pencil" @click="openEditDialog(course)" :pt="{
+            <Button label="Edit" v-if="authenticated"   severity="contrast" icon="pi pi-pencil" @click="openEditDialog(course)" :pt="{
           root: { style: 'margin-left: 10px' }
         }"  outlined/>
             <Button label="TPA Template"
               @click="$router.push({ name: 'tpa-template', params: { templateId: course.templateId } })"  raised />
             <Button label="TPA List" @click="$router.push({ name: 'tpa-list', params: { classId: course.classId } })"
               raised />
+              <span class="auto-run-info">Auto run <Checkbox v-model="course.autoRun" :binary="true" /></span>
           </div>
 
         </div>
@@ -213,6 +226,9 @@ const showGithubRepository = (identities) => {
                   :pt="{
           root: { style: 'height: 27px; width: 20px' },
         }"/>
+              <Button label="Activate" severity="success" @click="'hasta la vista'" :pt="{
+          root: { style: 'height: 27px;' },
+        }" raised />
               </div>
 
             </div>
@@ -221,7 +237,7 @@ const showGithubRepository = (identities) => {
             <div v-if="isExpanded(project.projectId)" class="details-container">
               <div class="left-sections">
                 <h3 style="margin: 0;">Identities</h3>
-                <ul v-if="project.identities && project.identities.length">
+                <ul v-if="project.identities && project.identities.length && project.identities.some(identitie => Object.keys(identitie).length > 0)">
                   <li v-for="identity in project.identities" :key="identity.source">
                     <template v-for="(value, key) in identity" :key="key">
                       <div>{{ key }}: {{ value }}</div>
@@ -231,7 +247,7 @@ const showGithubRepository = (identities) => {
                 <p v-else>No data available</p>
 
                 <h3 style="margin: 0;">Credentials</h3>
-                <ul v-if="project.credentials && project.credentials.length">
+                <ul v-if="project.credentials && project.credentials.length && project.credentials.some(credential => Object.keys(credential).length > 0)">
                   <li v-for="credential in project.credentials" :key="credential.source">
                     <template v-for="(value, key) in credential" :key="key">
                       <div>{{ key }}: {{ value }}</div>
@@ -245,7 +261,7 @@ const showGithubRepository = (identities) => {
                 <ScrollPanel
                   :style="{ 'width': '100%', 'height': project.members.length > 0 ? '200px' : '100px', 'margin-bottom': '5px', ' padding-right': ' 15px' }"
                   :pt="{ barY: 'hover:bg-green-400 bg-green-400 opacity-70', barX: 'hover:bg-green-400 bg-green-400 opacity-70' }">
-                  <ul v-if="project.members && project.members.length">
+                  <ul v-if="project.members && project.members.length && project.members.some(member => Object.keys(member).length > 0)">
                     <li v-for="member in project.members" :key="member">
                       <template v-for="(value, key) in member" :key="key">
                         <div>{{ key }}: {{ value }}</div>
@@ -272,7 +288,7 @@ const showGithubRepository = (identities) => {
     <Dialog v-model:visible="displayDialogEditClass" :header="'Edit course: ' + originalCourseValues.classId" modal>
       <ScrollPanel :style="{ 'width': '100%', 'height': '400px', 'margin-bottom': '5px' }"
         :pt="{ barY: 'hover:bg-green-400 bg-green-400 opacity-70', barX: 'hover:bg-green-400 bg-green-400 opacity-70' }">
-        <div class="flex flex-column gap-2 mb-3 mr-4 dialog-custom">
+        <div class="flex flex-column gap-2 mb-3 mr-3" :style="{ width: isMobile ?  '250px' : '300px'}">
           <div class="edit-card">
             <label for="templateId">Previous TPA template:</label>
             <p>{{ originalCourseValues.templateId }}</p>
@@ -322,6 +338,19 @@ const showGithubRepository = (identities) => {
 
 
 <style scoped>
+
+.auto-run-info {
+  display: inline-block;
+  border: 1px solid #000; 
+  border-radius: 8px; 
+  padding: 2px 6px; 
+  box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.3); 
+  font-size: 10px; 
+  white-space: nowrap; 
+}
+
+
+
 .children-container {
   padding-left: 20px;
 }
@@ -395,10 +424,7 @@ const showGithubRepository = (identities) => {
   margin-bottom: 12px;
 }
 
-.dialog-custom {
-  max-width: 300px;
-  min-width: 300px;
-}
+
 
 .github-button {
   color: white;
@@ -482,24 +508,18 @@ ul {
     width: auto;
   }
 
-  .edit-card,
   .details-container {
     flex-direction: column;
     align-items: flex-start;
   }
 
-  .dialog-custom,
-  .edit-card {
-    width: 100%;
-    box-sizing: border-box;
-    margin-bottom: 15px;
-  }
+  
 
   .github-icon{
     justify-content: flex-start;
   }
 
-
+  
 
 }
 </style>
