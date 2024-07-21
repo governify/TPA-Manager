@@ -222,7 +222,7 @@ function collapseAll() {
         <div class="card ">
             <NavMenu />
             <Divider layout="horizontal" />
-            <Panel header="TPA Information" toggleable collapsed>
+            <Panel header="TPA Information" aria-label="TPAInfo" toggleable collapsed>
                 <div class="content">
                     <p>A TPA is a document that describes the practices a team should follow during the development of a
                         project
@@ -389,10 +389,6 @@ function collapseAll() {
 </template>
 
 <style scoped>
-p {
-    color: #8e8e8e;
-    font-size: 15px !important;
-}
 
 .buttons {
     display: flex;

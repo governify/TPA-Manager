@@ -90,9 +90,9 @@ async function checkTemplateBeingUsed() {
             'Content-Type': 'application/json'
         }
     }).then(async (response) => {
-        courses = response.data.scope.sort((a, b) => a.classId.localeCompare(b.classId));
-        const coursesWithTPAtemplate = courses.filter(course => course.templateId === templateId);
-        if (coursesWithTPAtemplate.length > 0) {
+        courses = response.data.scope?.sort((a, b) => a.classId.localeCompare(b.classId));
+        const coursesWithTPAtemplate = courses?.filter(course => course.templateId === templateId);
+        if (coursesWithTPAtemplate?.length > 0) {
             onlyVisualize.value = true;
             tpaEditMode.value = false;
             toast.add({ severity: 'info', summary: 'Info', detail: 'This TPA is being used in a course. You can only read it.', life: 5000 });
