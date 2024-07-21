@@ -28,7 +28,7 @@ const templateId = route.params.templateId;
 const displayDialogNewTemplate = ref(false);
 const newTemplateId = ref('');
 const templatesURL = bluejayInfra.REGISTRY_URL + "/api/v6/templates";
-const assetsURL = bluejayInfra.REGISTRY_URL + "/api/v6/assets/tpa-1010101010";
+const assetsURL = bluejayInfra.ASSETS_MANAGER_URL + "/api/v1/public/renders/tpa/template.json";
 
 
 const pageHeader = computed(() => {
@@ -107,7 +107,7 @@ const items = computed(() => [
         command: () => appThemeStore.toggleTheme(),
     },
     {
-        label: authenticated.value ? 'Logout' : 'Add Auth',
+        label: authenticated.value ? 'Log out' : 'Add Auth',
         icon: authenticated.value ? 'pi pi-sign-out' : 'pi pi-user-plus',
         command: () => authenticated.value ? clearAuth() : visible_addAuth.value = true,
     }
@@ -119,6 +119,7 @@ async function addTemplate() {
         let tpaTemplate = null;
         const module = await import('axios');
         const axios = module.default;
+        console.log("assetsURL: ", assetsURL);
         tpaTemplate = await axios.get(assetsURL)
         const template = JSON.parse(JSON.stringify(tpaTemplate.data).replace(/"id":\s*"tpa-1010101010"/g, `"id": "${newTemplateId.value}"`).replace(/"type":\s*"agreement"/g, `"type": "template"`));
         await axios.post(templatesURL, template, {
@@ -190,7 +191,6 @@ async function addTemplate() {
             <img v-tooltip.bottom="'Edit mode'" :src="pageHeader.img.edit_mode" :alt="pageHeader.img.edit_mode"
                 width="30" />
 
-
         </div>
         <div class="header-top">
             <img v-if="pageHeader.title !== 'TPA'" :src="pageHeader.img" width="50" height="50"
@@ -218,10 +218,11 @@ async function addTemplate() {
             <Button v-if="!isMobile && pageHeader.title === 'Templates Management' && !templateId" label="New Template"
                 aria-label="new-template" severity="success" icon="pi pi-plus"
                 @click="displayDialogNewTemplate = true" />
+
             <Dialog v-model:visible="displayDialogNewTemplate" modal header="Add a new Template" :style="{}">
-                <div class="flex flex-column align-items-center gap-3 mb-3">
-                    <label for="newTemplateId">Template ID</label>
-                    <span class="p-text-secondary block mb-3">Example id: template-my-string-example-v1-0-0</span>
+                <div class="flex flex-column gap-3 mb-3">
+                    <label class="text-center" for="newTemplateId">Template ID</label>
+                    <span class="p-text-secondary text-center block mb-3">Example id: template-my-string-example-v1-0-0</span>
                     <InputText id="newTemplateId" v-model="newTemplateId" />
                 </div>
                 <div class="flex justify-content-center gap-2" style="margin-bottom: 10px;">
@@ -238,7 +239,7 @@ async function addTemplate() {
             <Button label="Templates Management" @click="$router.push({ name: 'templates-management' })"
                 icon="pi pi-wrench" outlined />
             <Button v-if="isMobile && pageHeader.title === 'Templates Management'" label="New Template"
-                icon="pi pi-plus" :pt="{
+                icon="pi pi-plus" @click="displayDialogNewTemplate = true" :pt="{
             root: { class: 'bg-green-400 border-green-400 hover:bg-green-600 hover:border-green-600' }
         }" />
 
@@ -256,7 +257,7 @@ async function addTemplate() {
 
             <Dialog v-model:visible="visible_addAuth" modal header="Add your authorization">
                 <span class="p-text-secondary block mb-5">It will be avialible until you log out.</span>
-                <div class="flex align-items-center gap-2 mb-3">
+                <div class="flex align-items-center gap-2 mb-3" style="width: 300px;">
                     <InputText id="auth" v-model="auth" class="flex-auto" autocomplete="off" />
                 </div>
                 <div class="flex justify-content-center gap-2" style="margin-bottom: 10px;">
