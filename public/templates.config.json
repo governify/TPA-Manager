@@ -1,6 +1,6 @@
 [
     {
-        "sample_url": "https://github.com/governify/zoo/blob/main/bluejay/tpa/showcase/v1.1/tpa-showcase-v1.1.json",
-        "description": "This is a sample with a bunch of different metrics and guarantees for GitHub."
+        "sample_url": "https://github.com/governify/zoo/blob/main/bluejay/tpa/showcase/basic/v1.1/tpa-showcase-basic-v1.1.json",
+        "description": "Issues in progress by members."
     }
 ]
