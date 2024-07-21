@@ -66,7 +66,7 @@ The following table shows the tools that must be deployed and the corresponding 
 | SCOPE_MANAGER_URL | process.env.SCOPE_MANAGER_URL | http://localhost:5700 | https://scopes.bluejay.governify.io |
 | COLLECTOR_EVENTS_URL | process.env.COLLECTOR_EVENTS_URL | http://localhost:5500 | https://event-collector.bluejay.governify.io/ |
 | DASHBOARD_URL | process.env.DASHBOARD_URL | http://localhost:5600 | https://dashboard.bluejay.governify.io/ |
-| REPORTER | process.env.REPORTER_URL | http://localhost:5300 | https://reporter.bluejay.governify.io/ |
+| REPORTER_URL | process.env.REPORTER_URL | http://localhost:5300 | https://reporter.bluejay.governify.io/ |
 
 
 
@@ -90,6 +90,7 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 ## Authors
 
 * **Jorge Florentino Serra** - [jorgefl8](https://github.com/jorgefl8)
+* **Mariano Manuel Torrado Sánchez** - [MaToSan24](https://github.com/MaToSan24)
 
 ## License
 
