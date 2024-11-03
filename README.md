@@ -1,6 +1,8 @@
-# TPA Designer
+# TPA Manager extension
 
-TPA Designer is a web application that allows the user to create and edit Team Practices Agreements (TPAs) for the Governify framework. It has been developed using Vue.js 3, Vite and PrimeVue. 
+This project has been a extension and improved from original [TPA Manager](https://github.com/MaToSan24/TPA-Manager).
+
+TPA Manager is a web application that allows users to navigate through their scope, in order to manage courses, Team Practices Agreements (TPAs), and TPA templates. It has been developed using Vue.js 3, Vite, and PrimeVue.
 
 ## Table of contents
 
@@ -52,19 +54,24 @@ The Code Editor component used for editing JSON, JavaScript and GraphQL is [Simp
 
 ## Governify specific configuration
 
-This application has been developed to be used within the Governify framework. In order to do so, some Governify-specific tool like ***Bluejay*** must be deployed in the same server as the TPA Designer.
+This application has been developed to be used within the Governify framework. In order to do so, some Governify-specific tool like ***Bluejay*** must be deployed in the same server as the TPA Manager.
 
-The following table shows the tools that must be deployed and the corresponding environment variables that must be set in the TPA Designer.
+The following table shows the tools that must be deployed and the corresponding environment variables that must be set in the TPA Manager.
 
 | Tool | Environment variable  | Default value | Example value |
 | ---- | --------------------- | ------------- | ------------- |
-| TPA Designer | - |  http://localhost:5173 | https://designer.bluejay.governify.io |
+| TPA Manager | - |  http://localhost:5173 | https://tpa-manager.bluejay.governify.io |
 | ASSETS_MANAGER_URL | process.env.ASSETS_MANAGER_URL | http://localhost:5200 | https://assets.bluejay.governify.io/ |
 | REGISTRY_URL | process.env.REGISTRY_URL | http://localhost:5400 | https://registry.bluejay.governify.io/ |
 | SCOPE_MANAGER_URL | process.env.SCOPE_MANAGER_URL | http://localhost:5700 | https://scopes.bluejay.governify.io |
 | COLLECTOR_EVENTS_URL | process.env.COLLECTOR_EVENTS_URL | http://localhost:5500 | https://event-collector.bluejay.governify.io/ |
+| DASHBOARD_URL | process.env.DASHBOARD_URL | http://localhost:5600 | https://dashboard.bluejay.governify.io/ |
+| REPORTER_URL | process.env.REPORTER_URL | http://localhost:5300 | https://reporter.bluejay.governify.io/ |
 
-There are two ways to set the environment variables:
+
+
+
+To set the environment variables:
 
 1. Create a `.env` file in the root directory of the project and set the variables there. The file should look like this (the values are just examples):
 
@@ -73,23 +80,16 @@ ASSETS_MANAGER_URL=https://assets.bluejay.governify.io/
 REGISTRY_URL=https://registry.bluejay.governify.io/
 SCOPE_MANAGER_URL=https://scopes.bluejay.governify.io
 COLLECTOR_EVENTS_URL=https://event-collector.bluejay.governify.io/
+DASHBOARD_URL=https://dashboard.bluejay.governify.io/
+REPORTER_URL=https://reporter.bluejay.governify.io/
 ```
-
-2. Set the environment variables in the server where the TPA Designer is deployed.
-
-In the `/src/stores/tpaEdition.js` file, there are some variables that hold the enumerated values for the different options that can be selected in the edition mode of the app. These variables are used to populate the dropdowns in the TPA Designer, among other things. The values of these variables can be modified to add new types to the dropdowns. The variables are: 
-
-- `BLOCK_TYPES`
-- `COLLECTOR_EVENT_SOURCES`
-- `COLLECTOR_EVENT_ENDPOINTS`
-- `STEP_TYPES`
-- `WINDOW_PERIOD_OPTIONS`
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
 ## Authors
 
+* **Jorge Florentino Serra** - [jorgefl8](https://github.com/jorgefl8)
 * **Mariano Manuel Torrado Sánchez** - [MaToSan24](https://github.com/MaToSan24)
 
 ## License
@@ -98,4 +98,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Badges
 
-[![DeepScan grade](https://deepscan.io/api/teams/21971/projects/25327/branches/790692/badge/grade.svg)](https://deepscan.io/dashboard#view=project&tid=21971&pid=25327&bid=790692)
+[![DeepScan grade](https://deepscan.io/api/teams/24171/projects/27402/branches/875329/badge/grade.svg)](https://deepscan.io/dashboard#view=project&tid=24171&pid=27402&bid=875329)

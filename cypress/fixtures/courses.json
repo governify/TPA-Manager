@@ -2,40 +2,43 @@
   "code": 200,
   "message": "Scope returned",
   "scope": [
-      {
-          "classId": "test-course",
-          "identities": [],
+    {
+      "classId": "test-course",
+      "templateId": "template-test-project",
+      "autoRun": false,
+      "hidden": false,
+      "identities": [],
+      "credentials": [],
+      "projects": [
+        {
+          "name": "test-project-without-tpa",
+          "owner": "TPA Designer",
+          "teamId": "Test team",
+          "projectId": "test-project-without-tpa",
+          "notifications": {},
           "credentials": [],
-          "projects": [
-              {
-                  "name": "Test project without TPA",
-                  "owner": "TPA Designer",
-                  "teamId": "Test team",
-                  "projectId": "test-project-without-tpa",
-                  "notifications": {},
-                  "credentials": [],
-                  "identities": [
-                      {
-                        "source": "github"
-                      }
-                  ],
-                  "members": []
-              },
-              {
-                "name": "Test project with TPA",
-                "owner": "TPA Designer",
-                "teamId": "Test team",
-                "projectId": "test-project-with-tpa",
-                "notifications": {},
-                "credentials": [],
-                "identities": [
-                    {
-                      "source": "github"
-                    }
-                ],
-                "members": []
+          "identities": [
+            {
+              "source": "github"
             }
-          ]
-      }
+          ],
+          "members": []
+        },
+        {
+          "name": "test-project-with-tpa",
+          "owner": "TPA Designer",
+          "teamId": "Test team",
+          "projectId": "test-project-with-tpa",
+          "notifications": {},
+          "credentials": [],
+          "identities": [
+            {
+              "source": "github"
+            }
+          ],
+          "members": []
+        }
+      ]
+    }
   ]
 }

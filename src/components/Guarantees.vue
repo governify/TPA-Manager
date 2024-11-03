@@ -12,6 +12,9 @@ import Checkbox from 'primevue/checkbox';
 import Dropdown from 'primevue/dropdown';
 import Markdown from 'vue3-markdown-it';
 import Divider from 'primevue/divider';
+import { useTPAMode } from '@/utils/tpaMode.js';
+
+const { tpaEditMode } = useTPAMode();
 
 const props = defineProps({
   fieldName: {
@@ -118,7 +121,7 @@ function scrollToMetric(metric) {
         
         <div style="display: grid; grid-auto-flow: column; grid-template-columns: 1fr auto 1fr;">
           <div class="flex flex-column align-items-start gap-3">
-            <span v-if="tpaEditionStore.isEditionMode" class="flex align-items-center gap-2">
+            <span v-if="tpaEditMode" class="flex align-items-center gap-2">
               <i class="pi pi-file-edit"></i>
               <span class="font-semibold">Id:</span>
               <EditContent :fieldName="fieldName + '[' + slotProps.index + ']' + '.id'" />
@@ -127,34 +130,34 @@ function scrollToMetric(metric) {
             <span class="flex align-items-center gap-2">
               <i class="pi pi-file-edit"></i>
               <span class="font-semibold">Notes:</span>
-              <EditContent v-if="tpaEditionStore.isEditionMode" :fieldName="fieldName + '[' + slotProps.index + ']' + '.notes'" />
+              <EditContent v-if="tpaEditMode" :fieldName="fieldName + '[' + slotProps.index + ']' + '.notes'" />
               <span v-else>{{ slotProps.data.notes }}</span>
             </span>
   
             <span class="flex align-items-center gap-2">
               <i class="pi pi-align-left"></i>
               <span class="font-semibold">Description:</span>
-              <EditContent v-if="tpaEditionStore.isEditionMode" :fieldName="fieldName + '[' + slotProps.index + ']' + '.description'" />
+              <EditContent v-if="tpaEditMode" :fieldName="fieldName + '[' + slotProps.index + ']' + '.description'" />
               <span v-else>{{ slotProps.data.description }}</span>
             </span>
   
             <span class="flex align-items-center gap-2">
               <i class="pi pi-users"></i>
               <span class="font-semibold">Is guarantee by member?</span>
-              <Checkbox v-model="isGuaranteeByMember[slotProps.index]" :disabled="!tpaEditionStore.isEditionMode" :readonly="!tpaEditionStore.isEditionMode" :binary="true" trueValue="*" :falseValue="undefined" @change="updateGuaranteeMember(slotProps.index)" />
+              <Checkbox v-model="isGuaranteeByMember[slotProps.index]" aria-label="guaranteeByMember" :disabled="!tpaEditMode" :readonly="!tpaEditMode" :binary="true" trueValue="*" :falseValue="undefined" @change="updateGuaranteeMember(slotProps.index)" />
             </span>
   
             <span class="flex align-items-center gap-2">
               <i class="pi pi-clock"></i>
               <span class="font-semibold">Calculation period:</span>
-              <Dropdown v-if="tpaEditionStore.isEditionMode" class="editDropdown" :options="tpaEditionStore.WINDOW_PERIOD_OPTIONS" v-model="slotProps.data.of[0].window.period" optionLabel="label" optionValue="value" placeholder="Select a window period" />
+              <Dropdown v-if="tpaEditMode" class="editDropdown" :options="tpaEditionStore.WINDOW_PERIOD_OPTIONS" v-model="slotProps.data.of[0].window.period" optionLabel="label" optionValue="value" placeholder="Select a window period" />
               <Tag v-else :value="slotProps.data.of[0].window.period"></Tag>
             </span>
   
             <span class="flex align-items-center gap-2">
               <i class="pi pi-check-circle"></i>
               <span class="font-semibold">Objective:</span>
-              <template v-if="tpaEditionStore.isEditionMode">
+              <template v-if="tpaEditMode">
                 <EditContent :fieldName="fieldName + '[' + slotProps.index + ']' + '.of[0].objective'" />
                 <i class="pi pi-info-circle" title="The objective must be a mathematical expression using the metrics defined in the 'with' section."></i>
               </template>
@@ -183,12 +186,12 @@ function scrollToMetric(metric) {
           </div>
         </div>
         
-        <Button v-if="tpaEditionStore.isEditionMode" class="mt-2" icon="pi pi-trash" severity="danger" @click="deleteGuarantee(slotProps.index)" />
+        <Button v-if="tpaEditMode" class="mt-2" icon="pi pi-trash" severity="danger" @click="deleteGuarantee(slotProps.index)" />
         
       </Fieldset>
     </template>
     
-    <template #footer v-if="tpaEditionStore.isEditionMode">
+    <template #footer v-if="tpaEditMode">
       <Button label="Add new guarantee" icon="pi pi-plus" @click="addNewGuarantee" />
     </template>
   </DataView>

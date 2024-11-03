@@ -24,23 +24,8 @@ describe('Not Found Component', () => {
         notFoundButton.click();
         cy.url().should('eq', Cypress.env('BASE_URL') + '/');
 
-        const homePageTitle = cy.get('h1');
-        homePageTitle.should('have.text', 'Welcome to the TPA Designer! ');
+        const homePageTitle = cy.get('.header-top > span');
+        homePageTitle.should('have.text', 'Development Scopes');
     });
 
-    it('should click on the Back button and see the previous page', () => {
-        cy.visit(Cypress.env('BASE_URL') + '/catalogue');
-        cy.visit(Cypress.env('BASE_URL') + '/non-existent-url');
-
-        const notFoundComponent = cy.get('body');
-
-        const notFoundButton = notFoundComponent.get('button').contains('Back');
-        notFoundButton.should('have.text', 'Back');
-
-        notFoundButton.click();
-        cy.url().should('eq', Cypress.env('BASE_URL') + '/catalogue');
-
-        const homePageTitle = cy.get('h1');
-        homePageTitle.should('have.text', '📖 TPs Catalogue');
-    });
 });

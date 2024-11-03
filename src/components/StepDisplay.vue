@@ -7,7 +7,6 @@ import { useAppThemeStore } from '@/stores/appTheme';
 
 import Tag from 'primevue/tag';
 import Chips from 'primevue/chips';
-import Toast from 'primevue/toast';
 import Button from 'primevue/button';
 import Dropdown from 'primevue/dropdown';
 import Fieldset from 'primevue/fieldset';
@@ -230,7 +229,7 @@ function moveStep(event, stepNumber, direction) {
               </div>
               <div v-else-if="stepKey === 'cache'" class="flex align-items-center gap-2">
                 <strong>Cache:</strong>
-                <Checkbox v-model="props.data.steps[stepNumber].cache" :binary="true" :trueValue="true" :falseValue="false" @change="updateStepData(stepNumber, stepKey, !stepValue)" />
+                <Checkbox v-model="props.data.steps[stepNumber].cache"  aria-label="cache" :binary="true" :trueValue="true" :falseValue="false" @change="updateStepData(stepNumber, stepKey, !stepValue)" />
               </div>
             </template>
 
@@ -281,7 +280,7 @@ function moveStep(event, stepNumber, direction) {
               </div>
               <div v-else-if="stepKey === 'cache'" class="flex align-items-center gap-2">
                 <strong>Cache:</strong>
-                <Checkbox v-model="stepData.cache" :binary="true" :trueValue="true" :falseValue="false" :readonly="true" />
+                <Checkbox v-model="stepData.cache" aria-label="cache" :binary="true" :trueValue="true" :falseValue="false" :readonly="true" />
               </div>
             </template>
 
@@ -332,7 +331,6 @@ function moveStep(event, stepNumber, direction) {
     <Button v-if="tpaEditionStore.isEditionMode" icon="pi pi-plus" class="p-button-rounded p-button-primary" @click="addNewStep" label="Add new step" />
   </Fieldset>
 
-  <Toast ref="toast" position="bottom-right" :baseZIndex="10000" />
 
 </template>
 

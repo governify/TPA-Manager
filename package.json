@@ -1,8 +1,9 @@
 {
   "name": "tpa-manager",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "scripts": {
     "dev": "vite",
+    "docker": "vite --host",
     "test": "vitest --dom",
     "updateSnapshots": "vitest -u",
     "cypress:open": "cypress open",
