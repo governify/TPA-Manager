@@ -26,9 +26,7 @@ const classId = route.params.classId;
 const projectId = route.params.projectId;
 const templateId = route.params.templateId;
 const displayDialogNewTemplate = ref(false);
-const newTemplateId = ref('');
-const templatesURL = bluejayInfra.REGISTRY_URL + "/api/v6/templates";
-const assetsURL = bluejayInfra.ASSETS_MANAGER_URL + "/api/v1/public/renders/tpa/template.json";
+
 
 
 const pageHeader = computed(() => {
@@ -112,35 +110,6 @@ const items = computed(() => [
         command: () => authenticated.value ? clearAuth() : visible_addAuth.value = true,
     }
 ]);
-async function addTemplate() {
-    if (!newTemplateId.value) {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Please fill the field.', life: 3000 });
-    } else {
-        let tpaTemplate = null;
-        const module = await import('axios');
-        const axios = module.default;
-        console.log("assetsURL: ", assetsURL);
-        tpaTemplate = await axios.get(assetsURL)
-        const template = JSON.parse(JSON.stringify(tpaTemplate.data).replace(/"id":\s*"tpa-1010101010"/g, `"id": "${newTemplateId.value}"`).replace(/"type":\s*"agreement"/g, `"type": "template"`));
-        await axios.post(templatesURL, template, {
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        }).then(async (response) => {
-            displayDialogNewTemplate.value = false;
-            newTemplateId.value = '';
-            emit('templates-updated');
-            toast.add({ severity: 'success', summary: 'Success', detail: 'Template added successfully.', life: 3000 });
-        }).catch(error => {
-            console.log("Error: ", error.response);
-            if (error.response?.data?.message?.data?.code === 11000) {
-                toast.add({ severity: 'error', summary: 'Error', detail: 'Template already exists.', life: 3000 });
-            } else {
-                toast.add({ severity: 'error', summary: 'Error', detail: error.response.data.error, life: 3000 });
-            }
-        });
-    }
-}
 
 
 </script>
@@ -215,25 +184,7 @@ async function addTemplate() {
                 </div>
             </div>
 
-            <Button v-if="!isMobile && pageHeader.title === 'Templates Management' && !templateId" label="New Template"
-                aria-label="new-template" severity="success" icon="pi pi-plus"
-                @click="displayDialogNewTemplate = true" />
 
-            <Dialog v-model:visible="displayDialogNewTemplate" modal header="Add a new Template" :style="{}">
-                <div class="flex flex-column gap-3 mb-3">
-                    <label class="text-center" for="newTemplateId">Template ID</label>
-                    <span class="p-text-secondary text-center block mb-3">Example id: template-my-string-example-v1-0-0</span>
-                    <InputText id="newTemplateId" v-model="newTemplateId" />
-                </div>
-                <div class="flex justify-content-center gap-2" style="margin-bottom: 10px;">
-                    <Button label="Add" @click="addTemplate" :pt="{
-            root: { class: 'bg-green-400 border-green-400 hover:bg-green-600 hover:border-green-600' }
-        }" />
-                    <Button label="Cancel" @click="displayDialogNewTemplate = false" :pt="{
-            root: { class: 'bg-red-400 border-red-400 hover:bg-red-600 hover:border-red-600' }
-        }" />
-                </div>
-            </Dialog>
             <Button v-if="!isMobile" label="Courses" icon="pi pi-folder-open" @click="$router.push({ name: 'home' })"
                 outlined />
             <Button label="Templates Management" @click="$router.push({ name: 'templates-management' })"
