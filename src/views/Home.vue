@@ -11,6 +11,7 @@ import { changeShowHidden } from '@/utils/showHiddenCourses.js';
 const { showHiddenCourses } = changeShowHidden();
 const loading = ref(true);
 const courses = ref([]);
+const tasks = ref({project: {}, course:{}, courseAdmin: {}});
 const toast = useToast();
 const bluejayInfra = bluejayInfraStore();
 const isMobile = ref(window.innerWidth <= 768);
@@ -21,6 +22,7 @@ const updateIsMobile = () => {
 };
 onMounted(async () => {
     await getCourses();
+    await getTasksFromDirector();
     const successMessage = sessionStorage.getItem('successMessage');
     if (successMessage) {
         toast.add({
@@ -85,6 +87,46 @@ async function handleAuthUpdated() {
     authenticated.value = localStorage.getItem('auth') ? true : false;
 }
 
+async function getTasksFromDirector(){
+    await new Promise(r => setTimeout(r, 300));
+    const module = await import('axios');
+    const axios = module.default;
+    await axios.get(bluejayInfra.DIRECTOR_URL + "/api/v1/tasks", {
+        headers: {
+            'Content-Type': 'application/json'}
+    }).then(async (response) => {
+        tasks.value = {project: {}, course:{}, courseAdmin: {}};
+        //Admin should have all courses in keys
+        courses.value[0].children.forEach(course => {
+            tasks.value.course[course.classId] = {projectsCount: course.projects.lenth, tasks: {}};
+        });
+        let taskArray = response.data;
+        taskArray.forEach(task => {
+            try{
+                if (task.tags?.keyValue?.target === "project"){
+                    //store task in project by type
+                    tasks.value.project[task.tags.keyValue.agreementId][task.tags.type] = task;
+                    if(task.tags?.keyValue?.courseId){
+                        // update course task count
+                        tasks.value.course[task.tags.keyValue.courseId].tasks[task.tags.type] += 1;
+                    }
+                }else if (task.tags?.keyValue?.target === "admin"){
+                    //store task in admin by course and type
+                    tasks.value.courseAdmin[task.tags.courseId][task.tags.type] = task;
+                }
+            }catch (e){
+                console.log(e);
+            }
+        
+        });
+
+        //
+    }).catch(error => {
+        console.log("Error: ", error);
+        tasks.value = {project: {}, course:{}, courseAdmin: {}};
+    });
+}
+
 </script>
 <template>
     <div style="display: grid; justify-items: center;">
@@ -95,7 +137,7 @@ async function handleAuthUpdated() {
                 <ProgressSpinner class="text-center" strokeWidth="4" />
                 <h3 class="text-center">Loading...</h3>
             </div>
-            <TreeBrowser @courseUpdated="getCourses" v-else :nodes="courses" :authenticated="authenticated" />
+            <TreeBrowser @courseUpdated="getCourses" @taskToggled="getTasksFromDirector" v-else :nodes="courses" :authenticated="authenticated" :tasks="tasks"/>
         </div>
     </div>
 </template>

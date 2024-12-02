@@ -17,6 +17,7 @@ import Checkbox from 'primevue/checkbox';
 //Tree logic
 const props = defineProps({
   nodes: Array,
+  tasks: Object,
   authenticated: Boolean
 });
 
@@ -31,7 +32,7 @@ const isExpanded = (nodeId) => {
 };
 
 watch(
-  () => props.authenticated, 
+  () => props.authenticated,
   (newVal) => {
     if (newVal) {
       authorization.value = localStorage.getItem('auth');
@@ -48,7 +49,7 @@ const isMobile = ref(window.innerWidth <= 768);
 const toast = useToast();
 const displayDialogEditClass = ref(false);
 const SCOPES_URL = `${bluejayInfra.SCOPE_MANAGER_URL}/api/v1/scopes/development/`;
-const emit = defineEmits(['courseUpdated']);
+const emit = defineEmits(['courseUpdated', 'taskToggled']);
 const editedCourseValues = ref({});
 const originalCourseValues = ref({});
 const authorization = ref(localStorage.getItem('auth'));
@@ -95,7 +96,7 @@ async function openEditDialog(node) {
 async function updateCourse() {
   try {
     const module = await import('axios');
-    const axios = module.default; 
+    const axios = module.default;
     const response = await axios.put(SCOPES_URL + originalCourseValues.value.classId, editedCourseValues.value, {
       headers: {
         'Content-Type': 'application/json',
@@ -118,7 +119,7 @@ async function updateCourse() {
 }
 async function getTemplates() {
   const module = await import('axios');
-    const axios = module.default; 
+  const axios = module.default;
   await axios.get(templatesURL)
     .then(async (response) => {
       templates.value = response.data.sort((a, b) => a.id.localeCompare(b.id));
@@ -138,7 +139,7 @@ const showDashboard = (projectId) => {
 };
 
 const showGithubRepository = (identities) => {
-  if(!authorization.value) {
+  if (!authorization.value) {
     toast.add({ severity: 'info', summary: 'Info', detail: 'Please add auth to view the GitHub repository.', life: 3000 });
     return;
   }
@@ -152,24 +153,54 @@ const showGithubRepository = (identities) => {
   }
 };
 
+const _getActionClassForCourse = (classId, actionType) => {
+  let result = "base-button ";
+  let projectsCount = props.tasks['course']?.[classId]?.projectsCount;
+  let actionsCount = props.tasks['course']?.[classId]?.[actionType].length;
+  if (projectsCount === actionsCount) {
+    result += "on";
+  } else if (actionsCount === 0) {
+    result += "off";
+  } else {
+    result += "half-on";
+  }
+  return result;
+};
+
+const getActionClass = (target, classId, actionType) => {
+  if (target === 'course') {
+    return _getActionClassForCourse(classId, actionType);
+  }
+  let result = "base-button ";
+  let task = props.tasks[target]?.[classId]?.[actionType];
+  if (task && task.running) {
+    result += "on";
+  } else {
+    result += "off";
+  }
+  console.log(result);
+  return result;
+};
+
 
 </script>
 
 <template>
-  <div class="node-container">
-    <!-- Root node -->
-    <div class="node-root-content">
-      <div class="node-head-root">
+  <div class="column">
+    <!-- title and Create button -->
+    <div class="space-between">
+      <div>
         <span style="font-size: 20px !important;cursor: pointer;" @click="toggleNode('Courses')">
           <i :class="['pi', 'pi-angle-double-right', { 'rotate-down': isExpanded('Courses'), 'rotate-right': !isExpanded('Courses') }]"
             :style="{ color: isExpanded('Courses') ? '#10B981' : '#43A5F4' }"></i>
           {{ nodes[0].name }}
         </span>
-        <Button label="New Course" severity="success" @click.stop @click="$router.push({ name: 'new-course' })" icon="pi pi-plus" :pt="{
-          root: { style: 'height: 27px; padding: 0 10px; margin-left: 10px' },
-        }" raised />
+        <Button label="New Course" severity="success" @click.stop @click="$router.push({ name: 'new-course' })"
+          icon="pi pi-plus" :pt="{
+            root: { style: 'height: 27px; padding: 0 10px; margin-left: 10px' },
+          }" raised />
       </div>
-
+      <!-- show hidden courses -->
       <div class="flex align-items-center gap-2">
         <span> Show hidden courses: </span>
         <InputSwitch v-model="showHiddenCourses" aria-label="showHiddenCourses" :pt="{
@@ -178,206 +209,194 @@ const showGithubRepository = (identities) => {
           })
         }" />
       </div>
-
     </div>
+
+
+
+
 
     <!-- Each course node -->
-    <div v-if="isExpanded('Courses')" class="children-container">
-      <div v-if="nodes[0].children?.length > 0" v-for="course in nodes[0].children" :key="course.classId"
-        class="node-content">
-        <div class="node-head">
-          <span style="font-size: 20px !important;cursor: pointer;" @click.stop="toggleNode(course.classId)">
-            <i :class="['pi', 'pi-angle-double-right', { 'rotate-down': isExpanded(course.classId), 'rotate-right': !isExpanded(course.classId) }]"
-              :style="{ color: isExpanded(course.classId) ? '#10B981' : '#43A5F4' }"></i>
-            {{ course.classId }}
-          </span>
-          <div class="flex gap-2">
-            <Button label="Edit" v-if="authenticated"   severity="contrast" icon="pi pi-pencil" @click="openEditDialog(course)" :pt="{
-          root: { style: 'margin-left: 10px' }
-        }"  outlined/>
-            <Button label="TPA Template"
-              @click="$router.push({ name: 'tpa-template', params: { templateId: course.templateId } })"  raised />
-            <Button label="TPA List" @click="$router.push({ name: 'tpa-list', params: { classId: course.classId } })"
+    <div v-if="isExpanded('Courses') && nodes[0].children?.length > 0" v-for="course in nodes[0].children"
+      :key="course.classId" class="column padding-left">
+      <div name="COURSE HEADER" class="space-between">
+
+        <div class="flex-row" style="cursor: pointer;" @click.stop="toggleNode(course.classId)">
+          <i :class="['pi', 'pi-angle-double-right', { 'rotate-down': isExpanded(course.classId), 'rotate-right': !isExpanded(course.classId) }]"
+            :style="{ color: isExpanded(course.classId) ? '#10B981' : '#43A5F4' }"></i>
+          <div class="dynamic-string">{{ course.classId }}</div>
+        </div>
+
+        <!-- buttons (right) -->
+        <div class="flex-row margin-left gap-4">
+          <!-- info buttons -->
+          <div class="flex-row gap-2">
+            <Button v-tooltip.top="'Edit'" v-if="authenticated" icon="pi pi-pencil" @click="openEditDialog(course)"
+              class="base-button info" raised />
+            <Button v-tooltip.top="'TPA Template'" icon="pi pi-file"
+              @click="$router.push({ name: 'tpa-template', params: { templateId: course.templateId } })"
+              class="base-button info" raised />
+            <Button v-tooltip.top="'TPA List'" icon="pi pi-list"
+              @click="$router.push({ name: 'tpa-list', params: { classId: course.classId } })" class="base-button info"
               raised />
-              <span class="auto-run-info">Auto run <Checkbox v-model="course.autoRun" :binary="true" /></span>
           </div>
 
+          <!-- action buttons -->
+          <div class="flex-row gap-2 ">
+            <Button v-tooltip.top="'Toggle All Calculations'" icon="pi pi-bolt" @click=""
+              :class="getActionClass('project', course.classId, 'calculation')" raised />
+            <Button v-tooltip.top="'Toggle All Emails'" icon="pi pi-envelope" @click=""
+              :class="getActionClass('project', course.classId, 'email')" raised />
+            <Button v-tooltip.top="'Toggle All Slack'" icon="pi pi-slack" @click=""
+              :class="getActionClass('project', course.classId, 'slack')" raised />
+          </div>
         </div>
+      </div>
 
-        <!-- Each project node -->
-        <div v-if="isExpanded(course.classId)" class="children-container">
-          <div v-if="course.projects.length > 0" v-for="project in course.projects" :key="project.projectId"
-            class="node-content">
-            <div class="node-head">
-              <span style="font-size: 20px !important;cursor: pointer;" @click.stop="toggleNode(project.projectId)">
-                <i :class="['pi', 'pi-angle-double-right', { 'rotate-down': isExpanded(project.projectId), 'rotate-right': !isExpanded(project.projectId) }]"
-                  :style="{ color: isExpanded(project.projectId) ? '#10B981' : '#43A5F4' }"></i>
-                {{ project.name }}
-              </span>
+      <!-- Course details (NEW LINE)  -->
+      <!-- Each project node -->
+      <div v-if="isExpanded(course.classId) && course.projects.length > 0" v-for="project in course.projects"
+        :key="project.projectId" class="padding-left column">
+        
+        <div class="flex-row space-between">
+          <div class="flex-row" style="cursor: pointer;" @click.stop="toggleNode(project.projectId)">
+            <i :class="['pi', 'pi-angle-double-right', { 'rotate-down': isExpanded(project.projectId), 'rotate-right': !isExpanded(project.projectId) }]"
+              :style="{ color: isExpanded(project.projectId) ? '#10B981' : '#43A5F4' }"></i>
+            <div class="dynamic-string">{{ project.name }}</div>
+          </div>
+
+          <!-- buttons (right) -->
+           <div class="flex-row margin-left gap-4">
+
+             <div class="flex align-items-center gap-2" @click.stop>
+               <Button v-tooltip.top="'TPA'" icon="pi pi-file-edit" @click="showTpa(course.classId, project.projectId)"
+               class="base-button info" raised />
+               <Button v-tooltip.top="'Dashboard'" icon="pi pi-chart-line" @click="showDashboard(project.projectId)"
+               class="base-button info" raised />
+               <Button v-tooltip.top="'GitHub Repository'" icon="pi pi-github"
+               @click="showGithubRepository(project.identities)" class="base-button info" raised />
+              </div>
+              
               <div class="flex align-items-center gap-2" @click.stop>
-                <Button label="TPA" @click="showTpa(course.classId, project.projectId)" :pt="{
-          root: { class: 'bg-yellow-400 border-yellow-400 hover:bg-yellow-600 hover:border-yellow-600', style: 'height: 27px; padding: 0 10px; margin-left: 10px' },
-        }" raised />
-                <Button label="Dashboard" @click="showDashboard(project.projectId)" :pt="{
-          root: { class: 'bg-yellow-400 border-yellow-400 hover:bg-yellow-600 hover:border-yellow-600', style: 'height: 27px;' },
-        }" raised />
-                <Button class="github-button" @click="showGithubRepository(project.identities)"
-                  icon="pi pi-github"
-                  :pt="{
-          root: { style: 'height: 27px; width: 20px' },
-        }"/>
-              <Button label="Activate" severity="success" @click="'hasta la vista'" :pt="{
-          root: { style: 'height: 27px;' },
-        }" raised />
-              </div>
-
-            </div>
-
-            <!-- each project details -->
-            <div v-if="isExpanded(project.projectId)" class="details-container">
-              <div class="left-sections">
-                <h3 style="margin: 0;">Identities</h3>
-                <ul v-if="project.identities && project.identities.length && project.identities.some(identitie => Object.keys(identitie).length > 0)">
-                  <li v-for="identity in project.identities" :key="identity.source">
-                    <template v-for="(value, key) in identity" :key="key">
-                      <div>{{ key }}: {{ value }}</div>
-                    </template>
-                  </li>
-                </ul>
-                <p v-else>No data available</p>
-
-                <h3 style="margin: 0;">Credentials</h3>
-                <ul v-if="project.credentials && project.credentials.length && project.credentials.some(credential => Object.keys(credential).length > 0)">
-                  <li v-for="credential in project.credentials" :key="credential.source">
-                    <template v-for="(value, key) in credential" :key="key">
-                      <div>{{ key }}: {{ value }}</div>
-                    </template>
-                  </li>
-                </ul>
-                <p v-else>No data available</p>
-              </div>
-              <div class="members-section">
-                <h3 style="margin-bottom: 5px;">Members</h3>
-                <ScrollPanel
-                  :style="{ 'width': '100%', 'height': project.members.length > 0 ? '200px' : '100px', 'margin-bottom': '5px', ' padding-right': ' 15px' }"
-                  :pt="{ barY: 'hover:bg-green-400 bg-green-400 opacity-70', barX: 'hover:bg-green-400 bg-green-400 opacity-70' }">
-                  <ul v-if="project.members && project.members.length && project.members.some(member => Object.keys(member).length > 0)">
-                    <li v-for="member in project.members" :key="member">
-                      <template v-for="(value, key) in member" :key="key">
-                        <div>{{ key }}: {{ value }}</div>
-                      </template>
-                    </li>
-                  </ul>
-                  <p v-else>No data available</p>
-                  <ScrollTop target="parent" :threshold="300" icon="pi pi-angle-up" />
-                </ScrollPanel>
-
+                <Button v-tooltip.top="'Toggle Calculations'" icon="pi pi-bolt" @click="'hasta la vista'"
+                :class="getActionClass('project', course.classId, 'calculation')" raised />
+                <Button v-tooltip.top="'Toggle Emails'" icon="pi pi-envelope" @click="'hasta la vista'"
+                :class="getActionClass('project', course.classId, 'email')" raised />
+                <Button v-tooltip.top="'Toggle Slack'" icon="pi pi-slack" @click="'hasta la vista'"
+                :class="getActionClass('project', course.classId, 'slack')" raised />
               </div>
             </div>
-
           </div>
-          <div v-else class="details-container">
-            <p>No projects available</p>
+
+        <!-- each project details (NEW LINE)-->
+        <div v-if="isExpanded(project.projectId)" class="details-container">
+          <div class="left-sections">
+            <h3 style="margin: 0;">Identities</h3>
+            <ul
+              v-if="project.identities && project.identities.length && project.identities.some(identitie => Object.keys(identitie).length > 0)">
+              <li v-for="identity in project.identities" :key="identity.source">
+                <template v-for="(value, key) in identity" :key="key">
+                  <div>{{ key }}: {{ value }}</div>
+                </template>
+              </li>
+            </ul>
+            <p v-else>No data available</p>
+
+            <h3 style="margin: 0;">Credentials</h3>
+            <ul
+              v-if="project.credentials && project.credentials.length && project.credentials.some(credential => Object.keys(credential).length > 0)">
+              <li v-for="credential in project.credentials" :key="credential.source">
+                <template v-for="(value, key) in credential" :key="key">
+                  <div>{{ key }}: {{ value }}</div>
+                </template>
+              </li>
+            </ul>
+            <p v-else>No data available</p>
+          </div>
+          <div class="members-section">
+            <h3 style="margin-bottom: 5px;">Members</h3>
+            <ScrollPanel
+              :style="{ 'width': '100%', 'height': project.members.length > 0 ? '200px' : '100px', 'margin-bottom': '5px', ' padding-right': ' 15px' }"
+              :pt="{ barY: 'hover:bg-green-400 bg-green-400 opacity-70', barX: 'hover:bg-green-400 bg-green-400 opacity-70' }">
+              <ul
+                v-if="project.members && project.members.length && project.members.some(member => Object.keys(member).length > 0)">
+                <li v-for="member in project.members" :key="member">
+                  <template v-for="(value, key) in member" :key="key">
+                    <div>{{ key }}: {{ value }}</div>
+                  </template>
+                </li>
+              </ul>
+              <p v-else>No data available</p>
+              <ScrollTop target="parent" :threshold="300" icon="pi pi-angle-up" />
+            </ScrollPanel>
+
           </div>
         </div>
+
       </div>
-      <div v-else class="details-container">
-        <p>No courses available</p>
+      <div v-else-if="isExpanded(course.classId) && !course.projects.length > 0" class="details-container">
+        <p>No projects available</p>
       </div>
+      
     </div>
-    <Dialog v-model:visible="displayDialogEditClass" :header="'Edit course: ' + originalCourseValues.classId" modal>
-      <ScrollPanel :style="{ 'width': '100%', 'height': '400px', 'margin-bottom': '5px' }"
-        :pt="{ barY: 'hover:bg-green-400 bg-green-400 opacity-70', barX: 'hover:bg-green-400 bg-green-400 opacity-70' }">
-        <div class="flex flex-column gap-2 mb-3 mr-3" :style="{ width: isMobile ?  '250px' : '300px'}">
-          <div class="edit-card">
-            <label for="templateId">Previous TPA template:</label>
-            <p>{{ originalCourseValues.templateId }}</p>
-            <label for="templateId">Select TPA template</label>
-            <Dropdown id="templateId" v-model="editedCourseValues.templateId" :options="templates" optionLabel="id"
-              optionValue="id" filter>
-            </Dropdown>
-          </div>
-          <div class="edit-card">
-            <label for="joinCode">Previous Join Code:</label>
-            <p>{{ originalCourseValues.joinCode }}</p>
-            <label for="joinCode">Join Code</label>
-            <InputText id="joinCode" v-model="editedCourseValues.joinCode" />
-          </div>
-          <div class="edit-card">
-            <label for="autoRun">Previous Auto-run:</label>
-            <p>{{ originalCourseValues.autoRun }}</p>
-            <label for="autoRun">Auto-run:</label>
-            <InputSwitch v-model="editedCourseValues.autoRun" :pt="{
-          slider: ({ props }) => ({
-            class: props.modelValue ? 'bg-green-400' : 'bg-gray-300'
-          })
-        }" />
-          </div>
-          <div class="edit-card">
-            <label for="hidden">Previous Hidden:</label>
-            <p>{{ originalCourseValues.hidden }}</p>
-            <label for="hidden">Hidden:</label>
-            <InputSwitch v-model="editedCourseValues.hidden" :pt="{
-          slider: ({ props }) => ({
-            class: props.modelValue ? 'bg-green-400' : 'bg-gray-300'
-          })
-        }" />
-          </div>
-        </div>
-        <ScrollTop target="parent" :threshold="300" icon="pi pi-angle-up" />
-      </ScrollPanel>
-      <div class="flex justify-content-center gap-2" style="margin-bottom: 10px;">
-        <Button label="Modify" @click="updateCourse"
-          :pt="{ root: { class: 'bg-green-400 border-green-400 hover:bg-green-600 hover:border-green-600' } }" />
-        <Button label="Cancel" @click="displayDialogEditClass = false"
-          :pt="{ root: { class: 'bg-red-400 border-red-400 hover:bg-red-600 hover:border-red-600' } }" />
-      </div>
-    </Dialog>
+    <div v-else-if="isExpanded('Courses') && !nodes[0].children?.length > 0" class="details-container">
+      <p>No courses available</p>
+    </div>
   </div>
+
 </template>
 
 
 <style scoped>
+/* show all borders in red for dev mode */
+/* * {
+  border: 1px solid red !important;
+} */
+
+.dynamic-string {
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .auto-run-info {
   display: inline-block;
-  border: 1px solid #000; 
-  border-radius: 8px; 
-  padding: 2px 6px; 
-  box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.3); 
-  font-size: 10px; 
-  white-space: nowrap; 
+  border: 1px solid #000;
+  border-radius: 8px;
+  padding: 2px 6px;
+  box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.3);
+  font-size: 10px;
+  white-space: nowrap;
 }
 
 
 
-.children-container {
-  padding-left: 20px;
+.padding-left {
+  padding-left: 10px;
 }
 
-.node-root-content {
+.space-between {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  flex-wrap: wrap;
 }
 
-.node-content {
-  display: block;
-  align-items: flex-start;
-  margin-top: 8px;
+.margin-left {
+  margin-left: auto;
 }
 
-.node-head, .node-head-root{
+.flex-row {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 5px;
-  font-size: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
-.main-node,
-.class-node,
-.project-node {
-  cursor: pointer;
+.column {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   gap: 10px;
 }
 
@@ -426,20 +445,59 @@ const showGithubRepository = (identities) => {
 
 
 
-.github-button {
+.base-button {
   color: white;
   background-color: #414543;
   border: 1px solid #414543;
   border-radius: 4px;
+  height: 25px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
-  padding: 0;
-  transition: background-color 0.3s, border-color 0.3s, transform 0.3s; 
+  transition: background-color 0.3s, border-color 0.3s, transform 0.3s;
 }
 
-.github-button:hover {
+.base-button:hover {
+
+  transform: scale(1.1);
+}
+
+.base-button.info {
+  background-color: #414543;
+  border: 1px solid #414543;
+}
+
+.base-button.info:hover {
   background-color: #333;
-  border-color: #333;
-  transform: scale(1.1); 
+  border: 1px solid #414543;
+}
+
+.base-button.on {
+  background-color: #10B981;
+  border: 1px solid #10B981;
+}
+
+.base-button.on:hover {
+  background-color: #0D9488;
+  border: 1px solid #10B981;
+}
+
+.base-button.off {
+  background-color: #E53E3E;
+  border: 1px solid #E53E3E;
+}
+
+.base-button.off:hover {
+  background-color: #D94646;
+  border: 1px solid #E53E3E;
+}
+
+.base-button.half-on {
+  background-color: #F59E0B;
+  border: 1px solid #F59E0B;
+}
+
+.base-button.half-on:hover {
+  background-color: #D97706;
+  border: 1px solid #F59E0B;
 }
 
 .details-container {
@@ -476,12 +534,13 @@ ul {
 :deep(.p-scrollpanel-content) {
   width: 100%;
 }
-.node-head > div > Button {
+
+.node-head>div>Button {
   height: 27px;
-  padding: 0 10px; 
+  padding: 0 10px;
   white-space: nowrap;
-  overflow: hidden; 
-  text-overflow: ellipsis; 
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 @media screen and (max-width: 768px) {
@@ -498,13 +557,13 @@ ul {
     flex-direction: column;
     align-items: flex-start;
   }
-  .node-head > div {
-    flex-direction: row; 
+
+  .node-head>div {
+    flex-direction: row;
     flex-wrap: wrap;
-    justify-content: flex-start;
   }
 
-  .node-head > div > Button {
+  .node-head>div>Button {
     width: auto;
   }
 
@@ -512,14 +571,5 @@ ul {
     flex-direction: column;
     align-items: flex-start;
   }
-
-  
-
-  .github-icon{
-    justify-content: flex-start;
-  }
-
-  
-
 }
 </style>

@@ -8,6 +8,7 @@ export const bluejayInfraStore = defineStore("bluejayInfra", () => {
   );
   const DASHBOARD_URL = ref(process.env.DASHBOARD_URL || "http://localhost:5600");
   const REPORTER_URL = ref(process.env.REPORTER_URL || "http://localhost:5300");
+  const DIRECTOR_URL = ref(process.env.DIRECTOR_URL || "http://localhost:5800");
 
   const isProductionEnvironment = ref(localStorage.getItem("isProductionEnvironment") === "true");
   const ASSETS_MANAGER_URL = computed(() => {
@@ -30,7 +31,7 @@ export const bluejayInfraStore = defineStore("bluejayInfra", () => {
     return "http://host.docker.internal:5700";
   });
 
-  return {REGISTRY_URL, COLLECTOR_EVENTS_URL, isProductionEnvironment, ASSETS_MANAGER_URL, SCOPE_MANAGER_URL, DASHBOARD_URL, REPORTER_URL,};
+  return {REGISTRY_URL, COLLECTOR_EVENTS_URL, isProductionEnvironment, ASSETS_MANAGER_URL, SCOPE_MANAGER_URL, DASHBOARD_URL, REPORTER_URL, DIRECTOR_URL};
 });
 
 
