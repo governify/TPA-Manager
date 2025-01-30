@@ -12,9 +12,9 @@ import { useConfirm } from 'primevue/useconfirm';
 import { bluejayInfraStore } from '@/stores/bluejayInfra';
 import { useTPAMode } from '@/utils/tpaMode.js';
 import Dialog from 'primevue/dialog';
-import Dropdown from 'primevue/dropdown';
 import InputText from 'primevue/inputtext';
 import { useRouter } from 'vue-router';
+import FileUpload from 'primevue/fileupload';
 
 const { tpaEditMode } = useTPAMode();
 const router = useRouter();
@@ -24,21 +24,23 @@ const confirm = useConfirm();
 const templates = ref([]);
 const courses = ref([]);
 const authorization = ref();
-const templatesURL = bluejayInfra.REGISTRY_URL + '/api/v6/templates';
+const registeredTemplatesURL = bluejayInfra.REGISTRY_URL + '/api/v6/templates';
 const coursesURL = bluejayInfra.SCOPE_MANAGER_URL + '/api/v1/scopes/development/courses';
 const isMobile = ref(window.innerWidth <= 768);
 const showNoTemplatesMessage = ref(false);
 const templatesConfig = ref([]);
-const sampleTemplate = ref();
 const displayCreateFromSample = ref(false);
 const newTemplateId = ref('');
-
+const assetsURL = bluejayInfra.ASSETS_MANAGER_URL + "/api/v1/public/renders/tpa/template.json";
+const selectedTemplateFile = ref(null);
+const defaultTemplate = ref(null);
 
 const updateIsMobile = () => {
     isMobile.value = window.innerWidth <= 768;
 };
 async function getTemplates() {
-    await axios.get(templatesURL)
+    // This gets the templates from the registry
+    await axios.get(registeredTemplatesURL)
         .then(async (response) => {
             templates.value = response.data?.sort((a, b) => a.id.localeCompare(b.id));
         })
@@ -80,7 +82,7 @@ const deletePopup = (event, templateId) => {
         rejectLabel: 'Cancel',
         acceptLabel: 'Yes',
         accept: () => {
-            axios.delete(`${templatesURL}/${templateId}`, {
+            axios.delete(`${registeredTemplatesURL}/${templateId}`, {
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': authorization.value
@@ -131,7 +133,7 @@ async function cloneTemplate(template) {
         const new_template = JSON.parse(JSON.stringify(template));
         new_template.id = template.id + '-clone';
         delete new_template._id;
-        await axios.post(templatesURL, new_template, {
+        await axios.post(registeredTemplatesURL, new_template, {
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': authorization.value
@@ -147,35 +149,25 @@ async function cloneTemplate(template) {
 
 }
 
-const openSampleUrl = (url) => {
-    window.open(url, '_blank');
-};
-async function createTemplateFromSample() {
-    if (!newTemplateId.value) {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Please fill the field.', life: 3000 });
-        return;
-    }
-    const apiGitHubUrl = sampleTemplate.value.replace('github.com', 'api.github.com/repos')
-        .replace('/blob/', '/')
-        .replace('/main/', '/contents/');
-    try {
-        const response = await axios.get(apiGitHubUrl);
-        const tpaTemplate = JSON.parse(atob(response.data.content));
-        tpaTemplate.id = `${newTemplateId.value}`;
-        tpaTemplate.type = "template";
 
-        await axios.post(templatesURL, tpaTemplate, {
+const fillTemplate = (tpaTemplate) => {
+    console.log(`Filling template with id: ${newTemplateId.value} and type: template`);
+    tpaTemplate.id = newTemplateId.value;
+    tpaTemplate.type = "template";
+    return tpaTemplate;
+};
+
+const postTemplate = async (tpaTemplate) => {
+    try {
+        await axios.post(registeredTemplatesURL, tpaTemplate, {
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': authorization.value
             }
         });
-        displayCreateFromSample.value = false;
-        newTemplateId.value = '';
-        getTemplates();
-        toast.add({ severity: 'success', summary: 'Success', detail: 'Template added successfully.', life: 3000 });
+        await getTemplates(); // Update templates list after adding a new template
     } catch (error) {
-        console.error("Error: ", error);
+        console.error('Error: ', error);
         let detailMessage = 'Unknown error occurred.';
         if (error.response) {
             if (error.response.data && error.response.data.code === 11000) {
@@ -188,7 +180,52 @@ async function createTemplateFromSample() {
         }
         toast.add({ severity: 'error', summary: 'Error', detail: detailMessage, life: 3000 });
     }
+};
+
+
+async function createTemplateFromSample() {
+    if (!newTemplateId.value) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Please fill the field.', life: 3000 });
+        return;
+    }
+
+    if (!selectedTemplateFile.value) {
+        console.log('No file selected, using default template');
+        if (!defaultTemplate.value) {
+            let response = await axios.get(assetsURL).catch(error => {
+                console.error('Error: ', error);
+                toast.add({ severity: 'error', summary: 'Error', detail: 'Error fetching default template', life: 3000 });
+            });
+            defaultTemplate.value = response.data;
+        }
+        let tpaTemplate = defaultTemplate.value;
+        tpaTemplate = fillTemplate(tpaTemplate);
+        await postTemplate(tpaTemplate); // Ensure templates list is updated
+        newTemplateId.value = '';
+        displayCreateFromSample.value = false;
+        getTemplates();
+        toast.add({ severity: 'success', summary: 'Success', detail: 'Template added successfully.', life: 3000 });
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+        try {
+            const tpaTemplate = fillTemplate(JSON.parse(event.target.result));
+            await postTemplate(tpaTemplate); // Ensure templates list is updated
+
+            displayCreateFromSample.value = false;
+            newTemplateId.value = '';
+            getTemplates();
+            toast.add({ severity: 'success', summary: 'Success', detail: 'Template added successfully.', life: 3000 });
+        } catch (error) {
+            console.error("Error: ", error);
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Invalid JSON file.', life: 3000 });
+        }
+    };
+    reader.readAsText(selectedTemplateFile.value);
 }
+
 const visualizeTemplate = (templateId) => {
     tpaEditMode.value = false;
     router.push({ name: 'tpa-template', params: { templateId } });
@@ -201,47 +238,64 @@ const editTemplate = (templateId) => {
 async function handleAuthUpdated() {
     authorization.value = localStorage.getItem('auth');
 }
+const tpaSamplesURL = "https://github.com/governify/zoo/tree/main/bluejay/tpa"
+
+
+
+const onFileSelect = (event) => {
+    const file = event.files[0];
+    if (!file) return;
+
+    selectedTemplateFile.value = file;
+};
+
 </script>
 
 <template>
     <div style="display: grid; justify-items: center;">
         <div class="card ">
-            <NavMenu @templates-updated="getTemplates" @auth-updated="handleAuthUpdated"/>
+            <NavMenu @templates-updated="getTemplates" @auth-updated="handleAuthUpdated" />
             <Divider layout="horizontal" />
             <div class="content">
                 <TransitionGroup name="list">
+                    <div class="card-checkout" key="checkout">
+                        <h2 class="checkout-title text-center">
+                            Check out some samples from our
+                            <a :href="tpaSamplesURL" target="_blank">GitHub</a>
+                        </h2>
+
+                        <Button label="Create new template from sample" severity="success"
+                            @click="displayCreateFromSample = true"
+                            :pt="{ root: { style: 'width: 280px; padding: 0 10px; margin-top: 10px' } }" />
+                        <Dialog v-model:visible="displayCreateFromSample" header="Add new template from sample" modal>
+                            <div class="flex flex-column  gap-3 mb-3" style="width: 300px;">
+                                <label for="newTemplateId">Template ID</label>
+                                <p>Example id: template-my-string-example-v1-0-0</p>
+                                <InputText id="newTemplateId" v-model="newTemplateId" />
+
+                                <label for="sampleTemplate">Upload Template Sample</label>
+                                <p>Please go to GitHub and download your desired sample or make your own.</p>
+                                <FileUpload name="sampleTemplate" :multiple="false" accept=".json" :maxFileSize="1000000" @select="onFileSelect" mode="basic" customUpload>
+                                    <template #content>
+                                        <div class="custom-upload-panel">
+                                            <p v-if="selectedTemplateFile.value">Selected file: {{ selectedTemplateFile.value.name }}</p>
+                                            <p v-else>Drag files here or click to upload</p>
+                                        </div>
+                                    </template>
+                                </FileUpload>
+                                <p style="color: red;">Note: If no file is selected, the default template will be used.</p>
+                            </div>
+                            <div class="flex justify-content-center gap-2" style="margin-bottom: 10px;">
+                                <Button label="Add" @click="createTemplateFromSample"
+                                    :pt="{ root: { class: 'bg-green-400 border-green-400 hover:bg-green-600 hover:border-green-600' } }" />
+                                <Button label="Cancel" @click="displayCreateFromSample = false"
+                                    :pt="{ root: { class: 'bg-red-400 border-red-400 hover:bg-red-600 hover-border-red-600' } }" />
+                            </div>
+                        </Dialog>
+                    </div>
                     <template v-if="templates.length === 0 && showNoTemplatesMessage">
-                        <div class="card-checkout">
-                            <h2 class="checkout-title text-center">Check out some samples from our GitHub</h2>
-                            <ul>
-                                <li v-for="(template, index) in templatesConfig" :key="index">
-                                    <div @click="openSampleUrl(template.sample_url)">
-                                        <span>{{ template.description }}</span>
-                                    </div>
-                                </li>
-                            </ul>
-                            <Button label="Create new template from sample" severity="success" @click="displayCreateFromSample = true"
-                                :pt="{ root: { style: 'width: 280px; padding: 0 10px; margin-top: 10px' } }" />
-                            <Dialog v-model:visible="displayCreateFromSample" header="Add new template from sample"
-                                modal>
-                                <div class="flex flex-column  gap-3 mb-3" style="width: 300px;">
-                                    <label for="newTemplateId">Template ID</label>
-                                    <p>Example id: template-my-string-example-v1-0-0</p>
-                                    <InputText id="newTemplateId" v-model="newTemplateId" />
-
-                                    <label for="sampleTemplate">Select Template Sample</label>
-                                    <Dropdown id="sampleTemplate" v-model="sampleTemplate" :options="templatesConfig"
-                                        optionLabel="description" optionValue="sample_url" filter showClear>
-                                    </Dropdown>
-                                </div>
-                                <div class="flex justify-content-center gap-2" style="margin-bottom: 10px;">
-                                    <Button label="Add" @click="createTemplateFromSample"
-                                        :pt="{ root: { class: 'bg-green-400 border-green-400 hover:bg-green-600 hover:border-green-600' } }" />
-                                    <Button label="Cancel" @click="displayCreateFromSample = false"
-                                        :pt="{ root: { class: 'bg-red-400 border-red-400 hover:bg-red-600 hover:border-red-600' } }" />
-                                </div>
-                            </Dialog>
-
+                        <div class="card-checkout" key="no-templates">
+                            <h2 class="checkout-title text-center">No templates found</h2>
                         </div>
                     </template>
                     <template v-else>
@@ -251,8 +305,8 @@ async function handleAuthUpdated() {
                                     @click="visualizeTemplate(template.id)">{{ template.id }}</span>
                                 <Button v-if="!template.id.endsWith('-clone')" label="Clone"
                                     @click="cloneTemplate(template)" icon="pi pi-clone" :pt="{
-                root: { style: 'height: 27px; min-width: 105px ;max-width: 105px ;padding: 0 10px; margin-left: 10px' },
-            }" />
+                                        root: { style: 'height: 27px; min-width: 105px ;max-width: 105px ;padding: 0 10px; margin-left: 10px' },
+                                    }" />
                             </div>
                             <div v-if="courses?.some(course => course.templateId === template.id)">
                                 <span style="margin-left: 15px; font-size: min(max(15px, 4vw), 18px) !important;">In use
@@ -263,7 +317,7 @@ async function handleAuthUpdated() {
                                         <li v-for="course in coursesForTemplate(template.id)" :key="course">
                                             <span style="font-size: min(max(15px, 4vw), 18px) !important;"
                                                 @click="$router.push({ name: 'tpa-list', params: { classId: course.classId } })">{{
-                course.classId }}</span>
+                                                    course.classId }}</span>
                                         </li>
                                     </ul>
                                     <ScrollTop target="parent" :threshold="200" style="margin-right: 15px;"
@@ -274,14 +328,14 @@ async function handleAuthUpdated() {
                                 <span>Not in use</span>
                                 <div class="buttons">
                                     <Button label="Edit" @click="editTemplate(template.id)" icon="pi pi-pencil" :pt="{
-                root: { class: 'bg-yellow-400 border-yellow-400 hover:bg-yellow-600 hover:border-yellow-600', style: 'min-width: 93px' }
-            }" />
+                                        root: { class: 'bg-yellow-400 border-yellow-400 hover:bg-yellow-600 hover:border-yellow-600', style: 'min-width: 93px' }
+                                    }" />
 
                                     <ConfirmPopup></ConfirmPopup>
                                     <Button label="Delete" @click="deletePopup($event, template.id)" icon="pi pi-trash"
                                         :pt="{
-                root: { class: 'bg-red-500 border-red-500 hover:bg-red-600 hover:border-red-600', style: 'min-width: 93px' }
-            }" />
+                                            root: { class: 'bg-red-500 border-red-500 hover:bg-red-600 hover-border-red-600', style: 'min-width: 93px' }
+                                        }" />
 
                                 </div>
                             </div>
@@ -415,6 +469,24 @@ li span {
     padding: 15px;
 }
 
+.custom-upload-panel {
+    border: 2px dashed #ccc;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.3s;
+}
+
+.custom-upload-panel:hover {
+    border-color: #10B981;
+}
+
+.custom-upload-panel p {
+    margin: 0;
+    color: #8e8e8e;
+    font-size: 16px;
+}
 
 @media screen and (max-width: 768px) {
     .template-card {

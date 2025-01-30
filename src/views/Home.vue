@@ -4,13 +4,14 @@ import Divider from 'primevue/divider';
 import { useToast } from "primevue/usetoast";
 import NavMenu from '@/components/NavMenu.vue';
 import { bluejayInfraStore } from '@/stores/bluejayInfra';
-import TreeBrowser from '@/components/TreeBrowser.vue';
+import ScopesTree from '@/components/TreeBrowser/ScopesTree.vue';
 import ProgressSpinner from 'primevue/progressspinner';
 import { changeShowHidden } from '@/utils/showHiddenCourses.js';
 
 const { showHiddenCourses } = changeShowHidden();
 const loading = ref(true);
 const courses = ref([]);
+const tasksByTarget = ref({ courses: {}, errors: [] });
 const toast = useToast();
 const bluejayInfra = bluejayInfraStore();
 const isMobile = ref(window.innerWidth <= 768);
@@ -21,6 +22,7 @@ const updateIsMobile = () => {
 };
 onMounted(async () => {
     await getCourses();
+    await getTasksFromDirector();
     const successMessage = sessionStorage.getItem('successMessage');
     if (successMessage) {
         toast.add({
@@ -40,6 +42,7 @@ watch(showHiddenCourses, () => {
     getCourses();
 });
 async function getCourses() {
+    console.log("Getting courses");
     const module = await import('axios');
     const axios = module.default;
     await axios.get(coursesURL.value, {
@@ -58,6 +61,11 @@ async function getCourses() {
             "name": "Courses",
             "children": []
         }];
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Could not connect to Scope Manager service. Courses will not be available.',
+        });
     });
     loading.value = false;
 }
@@ -85,6 +93,50 @@ async function handleAuthUpdated() {
     authenticated.value = localStorage.getItem('auth') ? true : false;
 }
 
+async function getTasksFromDirector() {
+    const module = await import('axios');
+    const axios = module.default;
+    console.log("Getting tasks from director");
+    await axios.get(bluejayInfra.DIRECTOR_URL + "/api/v1/tasks", {
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    }).then(async (response) => {
+        const data = response.data;
+        const tasks = { courses: {}, errors: [] };
+        for (let task of data) {
+            if (!(task.tags && task.tags.keyValue && task.tags.keyValue.type)) {
+                // The task does not have the required tags
+                continue;
+            }
+            const tags = task.tags.keyValue;
+            if (tags.projectId && tags.courseId) {
+                tasks.courses[tags.courseId] = tasks.courses[tags.courseId] ?? { tasks: {}, projects: {}, projectsActiveTasksCountByType: {} };
+                tasks.courses[tags.courseId].projects[tags.projectId] = tasks.courses[tags.courseId].projects[tags.projectId] ?? { tasks: {} };
+                tasks.courses[tags.courseId].projects[tags.projectId].tasks[tags.type] = task;
+                if (task.running) {
+                    // to compare number of active tasks in a course with the number of projects. RED = 0 active, GREEN = all active, YELLOW = some active
+                    tasks.courses[tags.courseId].projectsActiveTasksCountByType[tags.type] =
+                        tasks.courses[tags.courseId].projectsActiveTasksCountByType[tags.type] + 1 || 1;
+                }
+            } else if (tags.courseId) {
+                tasks.courses[tags.courseId] = tasks.courses[tags.courseId] ?? { tasks: {}, projects: {} };
+                tasks.courses[tags.courseId].tasks[tags.type] = task;
+            }
+        }
+        tasksByTarget.value = tasks;
+        console.log("DIRECTOR_TASK_BY_TARGET",tasksByTarget.value);
+    }).catch(error => {
+        tasksByTarget.value = { courses: {}, errors: [error] };
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Could not connect to Director service. Executing tasks will not be possible.',
+        });
+        console.log("Error: ", error);
+    });
+}
+
 </script>
 <template>
     <div style="display: grid; justify-items: center;">
@@ -95,7 +147,8 @@ async function handleAuthUpdated() {
                 <ProgressSpinner class="text-center" strokeWidth="4" />
                 <h3 class="text-center">Loading...</h3>
             </div>
-            <TreeBrowser @courseUpdated="getCourses" v-else :nodes="courses" :authenticated="authenticated" />
+            <ScopesTree @courseUpdated="getCourses" @taskToggled="getTasksFromDirector" v-else :nodes="courses"
+                :authenticated="authenticated" :tasks="tasksByTarget" />
         </div>
     </div>
 </template>

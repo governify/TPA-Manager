@@ -2,5 +2,9 @@
     {
         "sample_url": "https://github.com/governify/zoo/blob/main/bluejay/tpa/showcase/basic/v1.1/tpa-showcase-basic-v1.1.json",
         "description": "Issues in progress by members."
+    },
+    {
+        "sample_url": "https://github.com/governify/zoo/blob/main/bluejay/tpa/seville/PSG2-2425/v1.0/tpa-seville-PSG2-2425-v1.0.json",
+        "description": "New TPA for Seville PSG2-2425."
     }
 ]
