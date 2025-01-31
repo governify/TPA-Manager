@@ -3,7 +3,7 @@ name: Run tests and Build and Push Docker Image
 on:
   push:
     branches:
-      - develop
+      - NOWHWERE_CHANGE_THIS_LINE
   release:
     types: [created]
 
