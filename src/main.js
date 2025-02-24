@@ -6,7 +6,7 @@ import Tooltip from 'primevue/tooltip';
 import { createPinia } from 'pinia';
 import ToastService from 'primevue/toastservice';
 import ConfirmationService from 'primevue/confirmationservice';
-
+import { bluejayInfraStore } from '@/stores/bluejayInfra';
 
 import '@/assets/main.css';
 import '@/assets/styles/layout.scss';
@@ -29,4 +29,7 @@ app.use(router)
   
 app.directive('tooltip', Tooltip);  
 
-app.mount('#app');
+const bluejayInfra = bluejayInfraStore();
+bluejayInfra.loadConfig().then(() => {
+  app.mount('#app');
+});

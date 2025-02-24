@@ -1,0 +1,9 @@
+{
+  "VITE_REGISTRY_URL": "http://asdfasdfasdfasdfasdfasd:5400",
+  "VITE_COLLECTOR_EVENTS_URL": "http://asdfasdfasdfasdfasdfasd:5500",
+  "VITE_DASHBOARD_URL": "http://asdfasdfasdfasdfasdfasd:5600",
+  "VITE_REPORTER_URL": "http://asdfasdfasdfasdfasdfasd:5300",
+  "VITE_DIRECTOR_URL": "http://asdfasdfasdfasdfasdfasd:5800",
+  "VITE_ASSETS_MANAGER_URL": "http://asdfasdfasdfasdfasdfasd:5200",
+  "VITE_SCOPE_MANAGER_URL": "http://asdfasdfasdfasdfasdfasd:5700"
+}

@@ -15,7 +15,7 @@ const tasksByTarget = ref({ courses: {}, errors: [] });
 const toast = useToast();
 const bluejayInfra = bluejayInfraStore();
 const isMobile = ref(window.innerWidth <= 768);
-const coursesURL = ref(bluejayInfra.SCOPE_MANAGER_URL + "/api/v1/scopes/development/courses");
+const coursesURL = bluejayInfra.SCOPE_MANAGER_URL + "/api/v1/scopes/development/courses";
 const authenticated = ref(localStorage.getItem('auth') ? true : false);
 const updateIsMobile = () => {
     isMobile.value = window.innerWidth <= 768;
@@ -42,10 +42,10 @@ watch(showHiddenCourses, () => {
     getCourses();
 });
 async function getCourses() {
-    console.log("Getting courses");
     const module = await import('axios');
     const axios = module.default;
-    await axios.get(coursesURL.value, {
+    console.log("Getting courses");
+    await axios.get(coursesURL, {
         headers: {
             'Content-Type': 'application/json', 'Authorization': `${localStorage.getItem('auth')}`
         }
