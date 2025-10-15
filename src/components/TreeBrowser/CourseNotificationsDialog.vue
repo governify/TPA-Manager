@@ -18,12 +18,6 @@
         </div>
         <div class="edit-card gap-2">
           <h3>Email Notifications</h3>
-          <label for="allAdminNotificationsEmail">
-            <span v-tooltip.top="'Enable or disable email notifications for all admins in this course.'">
-              Email Notifications:
-            </span>
-          </label>
-          <InputSwitch id="allAdminNotificationsEmail" v-model="allAdminNotificationsEmail" />
           <label for="emailAdm">
             <span v-tooltip.top="'List of admin emails that will receive notifications.'">
               Admin Email:
@@ -40,12 +34,6 @@
         </div>
         <div class="edit-card">
           <h3>Slack Notifications</h3>
-          <label for="allAdminNotificationsSlack">
-            <span v-tooltip.top="'Enable or disable notifications in admin Slack channel.'">
-              Slack Notifications:
-            </span>
-          </label>
-          <InputSwitch id="allAdminNotificationsSlack" v-model="allAdminNotificationsSlack" />
           <label for="slackWebHook">
             <span v-tooltip.top="'Slack webhook URL of the admin channel. Notifications will be sent to this channel.'">
               Admin Slack Channel Webhook:
@@ -66,7 +54,6 @@
 import { ref, watch, onMounted } from 'vue';
 import Button from 'primevue/button';
 import Popup from '../Popup.vue';
-import InputSwitch from 'primevue/inputswitch';
 import Dropdown from 'primevue/dropdown';
 import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';
@@ -87,10 +74,6 @@ const slackWebHook = ref('');
 const emailAdm = ref([]);
 const newEmail = ref('');
 const adminNotificationsInterval = ref(86400);
-const allAdminNotificationsSlack = ref(false);
-const allAdminNotificationsEmail = ref(false);
-
-
 
 const loadConfig = () => {
   if (!props.course || !props.course.classId) return;
@@ -101,8 +84,6 @@ const loadConfig = () => {
   slackWebHook.value = credentials.slack || '';
   emailAdm.value = credentials.email ? credentials.email.split(',') : [];
   adminNotificationsInterval.value = config.interval || 86400;
-  allAdminNotificationsSlack.value = config.allAdminNotificationsSlack || false;
-  allAdminNotificationsEmail.value = config.allAdminNotificationsEmail || false;
 };
 
 const saveConfig = async () => {
@@ -115,8 +96,6 @@ const saveConfig = async () => {
     },
     config: {
       interval: adminNotificationsInterval.value,
-      allAdminNotificationsSlack: allAdminNotificationsSlack.value,
-      allAdminNotificationsEmail: allAdminNotificationsEmail.value,
     }
   };
   const courseWithNotifications = { notifications };

@@ -10,6 +10,7 @@ export const useBluejayInfraStore = defineStore("bluejayInfra", () => {
   const REPORTER_URL = ref("http://localhost:5300");
   const DIRECTOR_URL = ref("http://localhost:5800");
   const ASSETS_MANAGER_URL = ref("http://localhost:5200");
+  const ASSETS_MANAGER_INTERNAL_URL = ref("http://bluejay-assets-manager:80");
   const SCOPE_MANAGER_URL = ref("http://localhost:5700");
 
   const loadConfig = async () => {
@@ -23,6 +24,7 @@ export const useBluejayInfraStore = defineStore("bluejayInfra", () => {
     REPORTER_URL.value = data.VITE_REPORTER_URL || "http://localhost:5300";
     DIRECTOR_URL.value = data.VITE_DIRECTOR_URL || "http://localhost:5800";
     ASSETS_MANAGER_URL.value = data.VITE_ASSETS_MANAGER_URL || "http://localhost:5200";
+    ASSETS_MANAGER_INTERNAL_URL.value = data.VITE_ASSETS_MANAGER_INTERNAL_URL || "http://bluejay-assets-manager:80";
     SCOPE_MANAGER_URL.value = data.VITE_SCOPE_MANAGER_URL || "http://localhost:5700";
   };
 
@@ -34,6 +36,7 @@ export const useBluejayInfraStore = defineStore("bluejayInfra", () => {
     REPORTER_URL,
     DIRECTOR_URL,
     ASSETS_MANAGER_URL,
+    ASSETS_MANAGER_INTERNAL_URL,
     SCOPE_MANAGER_URL
   };
 });

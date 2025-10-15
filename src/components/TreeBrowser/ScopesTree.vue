@@ -145,10 +145,11 @@ const TASK_TYPES = {
     },
     getColor: (course, project) => getColorOfTask('tpaCalculation', course, project),
     createTask: (course, project, isRunning) => {
+      if (!course || !project || !course.classId || !project.projectId) return null;
       let calculationConfig = course.calculationConfig || getDefaultCalculationConfig();
       return {
         id: `tpaCalculation-${course.classId}-${project.projectId}`,
-        script: `${bluejayInfra.ASSETS_MANAGER_URL}/api/v1/public/director/tasks/system/requestTpaReport/script.js`,
+        script: `${bluejayInfra.ASSETS_MANAGER_INTERNAL_URL}/api/v1/public/director/tasks/system/requestTpaReport/script.js`,
         running: isRunning,
         config: {
           agreementId: `tpa-${project.projectId}` // This is standard in Bluejay. Do not change
@@ -174,21 +175,23 @@ const TASK_TYPES = {
     },
     getColor: (course, project) => getColorOfTask('email', course, project),
     createTask: (course, project, isRunning) => {
+      if (!course || !project || !course.classId || !project.projectId) return null;
+      if (project && !project.notifications?.email) return null; // Project does not have email configured
       let task = {
         running: isRunning,
         config: {
-          urls: { 
-            assets: `${bluejayInfra.ASSETS_MANAGER_URL}`, 
-            scopes: `${bluejayInfra.SCOPE_MANAGER_URL}`, 
-            registry: `${bluejayInfra.REGISTRY_URL}`, 
-            dashboard: `${bluejayInfra.DASHBOARD_URL}`, 
-            reporter: `${bluejayInfra.REPORTER_URL}` 
+          urls: {
+            assets: `${bluejayInfra.ASSETS_MANAGER_URL}`,
+            scopes: `${bluejayInfra.SCOPE_MANAGER_URL}`,
+            registry: `${bluejayInfra.REGISTRY_URL}`,
+            dashboard: `${bluejayInfra.DASHBOARD_URL}`,
+            reporter: `${bluejayInfra.REPORTER_URL}`
           },
           initialDate: new Date(new Date().setDate(new Date().getDate() - 3)).toISOString(),
           finalDate: null, //This is not used in the script, initialDate is to get DAYS count from now, maybe we should pass the days instead of the date
         },
         init: Date.now(),
-        end: new Date((new Date().getTime() +1000 *60 *60 * 24 * 365)).toISOString(), //1 year from now (user does not select end date)
+        end: new Date((new Date().getTime() + 1000 * 60 * 60 * 24 * 365)).toISOString(), //1 year from now (user does not select end date)
         interval: course.notifications?.config?.interval || 86400, //1 day
         code: 0, //skips oas warning
         message: "message", //skips oas warning
@@ -202,22 +205,71 @@ const TASK_TYPES = {
         }
       }
       if (project) {
-        task.script = `${bluejayInfra.ASSETS_MANAGER_URL}/api/v1/public/director/notificationScriptSimpl.js`;
-        task.id = `email-${project.projectId}`;
-        task.config.classId = course.classId;
-        task.config.projectId = project.projectId;
-        task.config.projectName = project.name;
-        task.config.email = project.notifications.email;
         task.config.forAdmin = false;
-
-      } else {
-        //Admin email
-        task.script = `${bluejayInfra.ASSETS_MANAGER_URL}/api/v1/public/director/adminEmailNotification.js`;
-        task.id = `admin-email-${course.classId}`;
-        task.config.classId = course.classId;
-        task.config.email = course.notifications?.credentials?.email;
-        task.config.forAdmin = true;
+        task.config.adminEmails = null;
+        task.config.courseId = course.classId;
+        task.config.projectId = project.projectId;
+        task.id = `email-${project.projectId}`;
       }
+      task.config.scopeManagerKey = localStorage.getItem('auth') || '';
+      task.script = `${bluejayInfra.ASSETS_MANAGER_INTERNAL_URL}/api/v1/public/director/tasks/system/tpaComplianceNotifications/script.js`;
+      return task;
+    }
+  },
+  EMAIL_ADMIN: {
+    name: 'admin-email',
+    isDisabled: (course, project) => {
+      return isNotificationTaskDisabled("admin-email", course, project);
+    },
+    getColor: (course, project) => getColorOfTask('admin-email', course, project),
+    createTask: (course, project, isRunning) => {
+      if (!course || !course.classId) return null;
+      if (!course.notifications?.credentials?.email) return null; // Course does not have admin email configured
+      let task = {
+        running: isRunning,
+        config: {
+          urls: {
+            assets: `${bluejayInfra.ASSETS_MANAGER_URL}`,
+            scopes: `${bluejayInfra.SCOPE_MANAGER_URL}`,
+            registry: `${bluejayInfra.REGISTRY_URL}`,
+            dashboard: `${bluejayInfra.DASHBOARD_URL}`,
+            reporter: `${bluejayInfra.REPORTER_URL}`
+          },
+          initialDate: new Date(new Date().setDate(new Date().getDate() - 3)).toISOString(),
+          finalDate: null, //This is not used in the script, initialDate is to get DAYS count from now, maybe we should pass the days instead of the date
+        },
+        init: Date.now(),
+        end: new Date((new Date().getTime() + 1000 * 60 * 60 * 24 * 365)).toISOString(), //1 year from now (user does not select end date)
+        interval: course.notifications?.config?.interval || 86400, //1 day
+        code: 0, //skips oas warning
+        message: "message", //skips oas warning
+        tags: {
+          simple: ['email', 'createdByTpaManager'],
+          keyValue: {
+            type: 'admin-email',
+            courseId: course.classId,
+            projectId: project?.projectId
+          }
+        }
+      }
+      /*
+      {
+          "forAdmin": false,xxxxx
+          "adminEmails": "your_email@example.com,your_email2@example.com",
+          "courseId": "showcase",
+          "projectId": "showcase-GH-governify_bluejay-showcase",
+          "scopeManagerKey": "bluejay-scopes-private-key"
+      }
+      */
+      //Admin email
+      task.config.forAdmin = true;
+      task.config.adminEmails = course.notifications?.credentials?.email;
+      task.config.courseId = course.classId;
+      task.projectId = null;
+      task.id = `admin-email-${course.classId}`;
+
+      task.config.scopeManagerKey = localStorage.getItem('auth') || '';
+      task.script = `${bluejayInfra.ASSETS_MANAGER_INTERNAL_URL}/api/v1/public/director/tasks/system/tpaComplianceNotifications/script.js`;
       return task;
     }
   },
@@ -228,21 +280,24 @@ const TASK_TYPES = {
     },
     getColor: (course, project) => getColorOfTask('slack', course, project),
     createTask: (course, project, isRunning) => {
+      if (!course || !course.classId) return null;
+      if (project && !project.projectId) return null;
+      if (project && !project.notifications?.slack) return null; // Project does not have slack configured
       let task = {
         running: isRunning,
         config: {
-          urls: { 
-            assets: `${bluejayInfra.ASSETS_MANAGER_URL}`, 
-            scopes: `${bluejayInfra.SCOPE_MANAGER_URL}`, 
-            registry: `${bluejayInfra.REGISTRY_URL}`, 
-            dashboard: `${bluejayInfra.DASHBOARD_URL}`, 
-            reporter: `${bluejayInfra.REPORTER_URL}` 
+          urls: {
+            assets: `${bluejayInfra.ASSETS_MANAGER_URL}`,
+            scopes: `${bluejayInfra.SCOPE_MANAGER_URL}`,
+            registry: `${bluejayInfra.REGISTRY_URL}`,
+            dashboard: `${bluejayInfra.DASHBOARD_URL}`,
+            reporter: `${bluejayInfra.REPORTER_URL}`
           },
           initialDate: new Date(new Date().setDate(new Date().getDate() - 3)).toISOString(),
           finalDate: null, //This is not used in the script, initialDate is to get DAYS count from now, maybe we should pass the days instead of the date
         },
         init: Date.now(),
-        end: new Date((new Date().getTime() +1000 *60 *60 * 24 * 365)).toISOString(), //1 year from now (user does not select end date)
+        end: new Date((new Date().getTime() + 1000 * 60 * 60 * 24 * 365)).toISOString(), //1 year from now (user does not select end date)
         interval: course.notifications?.config?.interval || 86400, //1 day
         code: 0, //skips oas warning
         message: "message", //skips oas warning
@@ -251,7 +306,7 @@ const TASK_TYPES = {
           keyValue: {
             type: 'slack',
             courseId: course.classId,
-            projectId: project.projectId
+            projectId: project?.projectId
           }
         }
       }
@@ -306,7 +361,9 @@ const toggleAllProjectsAction = async (params) => {
   await Promise.all(promises);
   console.log('FINISHED TOGGLING ALL PROJECTS');
   emit('taskToggled');
-  optimizeCalculationPeriod();
+  if (params.action === TASK_TYPES.TPA_CALCULATION) {
+    optimizeCalculationPeriod();
+  }
 };
 
 
@@ -330,6 +387,34 @@ const toggleAction = async (config) => {
 
   let directorTasksUrl = `${bluejayInfra.DIRECTOR_URL}/api/v1/tasks`;
   let newTask = action.createTask(course, project, isRunning);
+
+  if (newTask === null) {
+    toast.add({ severity: 'warn', summary: 'Warning', detail: 'Missing required parameters for this task.', life: 3000 });
+    return;
+  }
+
+  // Special handling for admin-email: DELETE if turning off
+  if ((action.name === 'admin-email' || action === 'admin-email') && !isRunning) {
+    // Find the task id in tasks
+    const taskId = props.tasks.courses?.[course.classId]?.tasks?.['admin-email']?.id;
+    if (!taskId) {
+      toast.add({ severity: 'warn', summary: 'Warning', detail: 'No admin-email task to delete.', life: 3000 });
+      return;
+    }
+    try {
+      await axios.delete(`${directorTasksUrl}/${taskId}`);
+      if (emitsEvent) {
+        emit('taskToggled');
+      }
+      toast.add({ severity: 'success', summary: 'Success', detail: 'Admin email notification removed.', life: 3000 });
+    } catch (error) {
+      console.error('Error deleting admin-email task', error);
+      toast.add({ severity: 'error', summary: 'Error', detail: 'Could not delete admin email notification', life: 3000 });
+    }
+    return;
+  }
+
+  // Default: POST to create/update task
   try {
     const response = await axios.post(directorTasksUrl, newTask, {
       headers: {
@@ -339,7 +424,9 @@ const toggleAction = async (config) => {
     console.log('Task toggled successfully', response.data);
     if (emitsEvent) {
       emit('taskToggled');
-      optimizeCalculationPeriod();
+      if (action === TASK_TYPES.TPA_CALCULATION) {
+        optimizeCalculationPeriod();
+      }
     }
     return;
   } catch (error) {
@@ -405,14 +492,20 @@ const getTaskStatus = (action, course, project) => {
     result = { isRunning, color: isRunning ? taskStates.all : taskStates.none };
   } else {
     // Course task. (Enable/Disable all projects tasks), must compare project count with active tasks count
-    let activeTasks = tasks.courses[course.classId]?.projectsActiveTasksCountByType[action];
-    let projectCount = course.projects.length;
-    if (!activeTasks || activeTasks === 0) {
-      result = { isRunning: false, color: taskStates.none };
-    } else if (activeTasks === projectCount) {
-      result = { isRunning: true, color: taskStates.all };
+    // Special case for admin-email (and otras tareas de curso)
+    if (action === 'admin-email' || action === TASK_TYPES.EMAIL_ADMIN.name) {
+      let isRunning = tasks.courses[course.classId]?.tasks?.['admin-email']?.running;
+      result = { isRunning, color: isRunning ? taskStates.all : taskStates.none };
     } else {
-      result = { isRunning: false, color: taskStates.some };
+      let activeTasks = tasks.courses[course.classId]?.projectsActiveTasksCountByType?.[action];
+      let projectCount = course.projects.length;
+      if (!activeTasks || activeTasks === 0) {
+        result = { isRunning: false, color: taskStates.none };
+      } else if (activeTasks === projectCount) {
+        result = { isRunning: true, color: taskStates.all };
+      } else {
+        result = { isRunning: false, color: taskStates.some };
+      }
     }
   }
 
@@ -492,17 +585,22 @@ const isTaskRunning = (action, course, project) => {
 
           <!-- action buttons -->
           <div class="flex-row gap-2 ">
-            <ActionButton v-tooltip.top="'Toggle All Calculations'"
+            <ActionButton v-tooltip.top="'Toggle Admin Email Notifications'"
+              @turnOn="toggleAction({ action: TASK_TYPES.EMAIL_ADMIN, wasRunning: false, course, project: null })"
+              @turnOff="toggleAction({ action: TASK_TYPES.EMAIL_ADMIN, wasRunning: true, course, project: null })"
+              class="base-button" icon="pi pi-user" :color="TASK_TYPES.EMAIL_ADMIN.getColor(course)"
+              :disabled="TASK_TYPES.EMAIL_ADMIN.isDisabled(course)" />
+            <ActionButton v-tooltip.top="'Toggle All Calculations for all projects'"
               @turnOn="toggleAllProjectsAction({ action: TASK_TYPES.TPA_CALCULATION, wasRunning: false, course })"
               @turnOff="toggleAllProjectsAction({ action: TASK_TYPES.TPA_CALCULATION, wasRunning: true, course })"
               class="base-button" icon="pi pi-bolt" :color="TASK_TYPES.TPA_CALCULATION.getColor(course)"
               :disabled="TASK_TYPES.TPA_CALCULATION.isDisabled(course)" />
-            <ActionButton v-tooltip.top="'Toggle All Emails'"
+            <ActionButton v-tooltip.top="'Toggle All Emails for all projects'"
               @turnOn="toggleAllProjectsAction({ action: TASK_TYPES.EMAIL, wasRunning: false, course })"
               @turnOff="toggleAllProjectsAction({ action: TASK_TYPES.EMAIL, wasRunning: true, course })"
               class="base-button" icon="pi pi-envelope" :color="TASK_TYPES.EMAIL.getColor(course)"
               :disabled="TASK_TYPES.EMAIL.isDisabled(course)" />
-            <ActionButton v-tooltip.top="'Toggle All Slack'"
+            <ActionButton v-tooltip.top="'Toggle All Slack for all projects'"
               @turnOn="toggleAllProjectsAction({ action: TASK_TYPES.SLACK, wasRunning: false, course })"
               @turnOff="toggleAllProjectsAction({ action: TASK_TYPES.SLACK, wasRunning: true, course })"
               icon="pi pi-slack" :color="TASK_TYPES.SLACK.getColor(course)"

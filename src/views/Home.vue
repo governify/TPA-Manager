@@ -114,10 +114,14 @@ async function getTasksFromDirector() {
                 tasks.courses[tags.courseId] = tasks.courses[tags.courseId] ?? { tasks: {}, projects: {}, projectsActiveTasksCountByType: {} };
                 tasks.courses[tags.courseId].projects[tags.projectId] = tasks.courses[tags.courseId].projects[tags.projectId] ?? { tasks: {} };
                 tasks.courses[tags.courseId].projects[tags.projectId].tasks[tags.type] = task;
+                // Ensure projectsActiveTasksCountByType is initialized
+                if (!tasks.courses[tags.courseId].projectsActiveTasksCountByType) {
+                    tasks.courses[tags.courseId].projectsActiveTasksCountByType = {};
+                }
                 if (task.running) {
                     // to compare number of active tasks in a course with the number of projects. RED = 0 active, GREEN = all active, YELLOW = some active
                     tasks.courses[tags.courseId].projectsActiveTasksCountByType[tags.type] =
-                        tasks.courses[tags.courseId].projectsActiveTasksCountByType[tags.type] + 1 || 1;
+                        (tasks.courses[tags.courseId].projectsActiveTasksCountByType[tags.type] || 0) + 1;
                 }
             } else if (tags.courseId) {
                 tasks.courses[tags.courseId] = tasks.courses[tags.courseId] ?? { tasks: {}, projects: {} };
